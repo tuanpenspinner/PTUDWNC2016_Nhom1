@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon app.js",
+    "start": "nodemon --inspect app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,8 +20,13 @@
   "homepage": "https://github.com/tuanpenspinnner/PTUDWNC2016_Nhom1#readme",
   "dependencies": {
     "axios": "^0.19.2",
+    "crypto-js": "^4.0.0",
     "dotenv": "^8.2.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "fs": "0.0.1-security",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.10.0",
+    "node-rsa": "^1.0.8"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"
