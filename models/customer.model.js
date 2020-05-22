@@ -11,6 +11,8 @@ const savingAccount = new Schema({
 });
 const customerSchema = new Schema({
     name: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true },
     checkingAccount: {type: checkingAccount0, required: true},
     savingsAccount:{ type: [savingAccount]},
 });
@@ -23,6 +25,7 @@ const getCustomer= async(_accountNumber)=>{
         const customer = await Customer.findOne({'checkingAccount.accountNumber' : _accountNumber});
         //      listAllCustomers instanceof mongoose.Query; // true
         //    const reslt= await listAllCustomers;
+       // console.log(customer);
         return customer;
     } catch (e) {
         console.log("ERROR: " + e);

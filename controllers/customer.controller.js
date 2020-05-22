@@ -7,7 +7,7 @@ exports.getCustomer=async(req,res)=>{
     const customer = await Customer.getCustomer(_accountNumber);
 
     if (!customer) {
-        throw "failed";
+        throw "Tài khoản không tồn tại!";
     }
 
     return res.json({
