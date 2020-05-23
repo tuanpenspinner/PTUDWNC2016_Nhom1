@@ -7,7 +7,6 @@ const axios = require('axios');
 // RSA key-pair
 const rsaPrivateKeyString = fs.readFileSync('rsa_private.key', 'utf8');
 const rsaPublicKeyString = fs.readFileSync('rsa_public.key', 'utf8');
-// console.log('prikey', rsaPrivateKey);
 
 // load key from PEM string
 const pubKeyRSA = new nodeRSA();
@@ -15,11 +14,9 @@ const priKeyRSA = new nodeRSA();
 
 pubKeyRSA.importKey(rsaPublicKeyString);
 priKeyRSA.importKey(rsaPrivateKeyString);
-// console.log('pubkey', pubKeyRSA.isEmpty());
-// console.log('prikey', priKeyRSA.isEmpty());
 
 const auth_bank = ['RSA-bank', 'PGP-bank']; // just test
-const secret = 'hiphopneverdie69';
+const secret = 'hiphopneverdie';
 
 // implement
 function checkSecurity(req, isMoneyAPI = false) {
@@ -32,6 +29,7 @@ function checkSecurity(req, isMoneyAPI = false) {
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + secret;
   const hashString = hash.MD5(sigString);
+  console.log(hashString);
   if (sig !== hashString) throw new Error('Signature failed.');
 }
 
@@ -40,11 +38,11 @@ function verifySig(req) {
   const { bank_code, sig, ts } = req.headers;
 
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + secret;
-  const hashString = hash.MD5(sigString);
+  const hashString = hash.MD5(sigString); // return hex encoding string
 
   // sign
   // const genSig = priKeyRSA.sign(hashString, 'hex', 'hex');
-  // console.log('gensfds', genSig);
+  // console.log('fds', genSig);
 
   // verify
   const verification_result = pubKeyRSA.verify(hashString, sig, 'hex', 'hex');
@@ -88,22 +86,24 @@ function getBankDetail(partner_code) {
 
 module.exports = {
   bankDetail: (req, res) => {
+    let msg = '';
     try {
       checkSecurity(req);
-      console.log('SUCCESS bank-detail');
+      msg = 'SUCCESS bank-detail';
     } catch (err) {
-      console.log('ERROR', err.message);
+      msg = `ERROR ${err.message}`;
     }
-    res.send('bank detail here');
+    res.send(`bank-detail API done. ${msg}`);
   },
   moneyTransfer: (req, res) => {
+    let msg;
     try {
       verifySig(req);
-      console.log('SUCCESS verify-sig');
+      msg = 'SUCCESS verify-sig';
     } catch (err) {
-      console.log('ERR', err.message);
+      msg = `ERROR ${err.message}`;
     }
-    res.send('money transfer done');
+    res.send(`money-transfer API done. ${msg}`);
   },
   postMoneyTransfer: (req, res) => {
     console.log('post OK');
