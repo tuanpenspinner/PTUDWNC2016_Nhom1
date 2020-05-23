@@ -29,7 +29,6 @@ function checkSecurity(req, isMoneyAPI = false) {
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + secret;
   const hashString = hash.MD5(sigString);
-  console.log(hashString);
   if (sig !== hashString) throw new Error('Signature failed.');
 }
 
