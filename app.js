@@ -4,7 +4,7 @@ const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
 const logger = require('morgan');
-const connectDB = require("./dbs");
+const connectDB = require('./dbs');
 
 const indexRoute = require('./routes/index');
 const moneyTransferRoute = require('./routes/money-transfer');
@@ -39,6 +39,6 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500).send('ERROR');
 });
 
-app.listen(PORT, () => {
+app.listen(process.env.PORT || PORT, () => {
   console.log('Great Internet Banking - http://localhost:' + PORT);
 });
