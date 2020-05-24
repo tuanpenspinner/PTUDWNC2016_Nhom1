@@ -15,19 +15,28 @@ const priKeyRSA = new nodeRSA();
 pubKeyRSA.importKey(rsaPublicKeyString);
 priKeyRSA.importKey(rsaPrivateKeyString);
 
-const auth_bank = ['RSA-bank', 'PGP-bank']; // just test
-const secret = 'hiphopneverdie';
+const partners = {
+  RSA_bank: {
+    bank_code: 'RSA_bank',
+    secret: 'hello',
+  },
+  CryptoBank: {
+    bank_code: 'CryptoBank', // team Dang Thanh Tuan
+    secret: 'CryptoBank_secret',
+  },
+};
+const MY_BANK_SECRET = 'hiphopneverdie';
 
 // implement
 function checkSecurity(req, isMoneyAPI = false) {
   const { bank_code, sig, ts } = req.headers;
   // check partner code
-  if (!auth_bank.includes(bank_code)) throw new Error('Your bankCode is not correct.');
+  if (!partners[bank_code]) throw new Error('Your bankCode is not correct.');
   // check time in 1 minutes
   if (Date.now() - parseInt(ts) > 60) throw new Error('Time exceed.');
   // check signature. If money API then ignore check here
   if (isMoneyAPI) return;
-  const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + secret;
+  const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
   const hashString = hash.MD5(sigString);
   if (sig !== hashString) throw new Error('Signature failed.');
 }
@@ -36,7 +45,7 @@ function verifySig(req) {
   checkSecurity(req, true);
   const { bank_code, sig, ts } = req.headers;
 
-  const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + secret;
+  const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
   const hashString = hash.MD5(sigString); // return hex encoding string
 
   // sign
@@ -52,22 +61,11 @@ function verifySig(req) {
 
 function moneyTransfer() {}
 
-const partners = {
-  RSA_bank: {
-    bank_code: 'RSA_bank',
-    secret: 'hello',
-  },
-  PGP_bank: {
-    bank_code: 'CryptoBank', // team Dang Thanh Tuan
-    secret: 'CryptoBank_secret',
-  },
-};
-
 function getBankDetail(partner_code) {
   const data = {};
   const ts = Date.now().toString();
   const sigString = process.env.MY_BANK_CODE + ts + JSON.stringify(data) + partners[partner_code].secret;
-  const sig = md5(sigString).toString();
+  const sig = hash.MD5(sigString);
   const headers = {
     bank_code,
     ts,
