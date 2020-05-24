@@ -58,10 +58,11 @@ const partners = {
     secret: 'hello',
   },
   PGP_bank: {
-    bank_code: 'PGP_bank',
-    secret: 'world',
+    bank_code: 'CryptoBank', // team Dang Thanh Tuan
+    secret: 'CryptoBank_secret',
   },
 };
+
 function getBankDetail(partner_code) {
   const data = {};
   const ts = Date.now().toString();
