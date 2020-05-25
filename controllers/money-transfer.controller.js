@@ -4,7 +4,7 @@ const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
 const axios = require('axios');
 
-const Customer = require('../models/customer.model');
+const customerModel = require('../models/customer.model');
 
 const PARTNERS = {
   RSA_bank: {
@@ -101,50 +101,51 @@ function getBankDetail(partner_code) {
 
 module.exports = {
   bankDetail: async (req, res) => {
-    let msg = '';
     try {
       const { account_number } = req.body;
       if (!account_number) throw new Error('account_number is missing in request body.');
 
       checkSecurity(req);
-      const { name, checkingAccount } = await Customer.getCustomer(account_number);
+      const account = await customerModel.getCustomer(account_number);
+      if (!account) throw new Error('Account not found.');
       res.json({
-        name: name,
-        account_number: checkingAccount.accountNumber,
+        name: account.name,
+        account_number: account.checkingAccount.accountNumber,
       });
     } catch (err) {
-      msg = `ERROR ${err.message}`;
+      res.json({ error: `${err.message}` });
     }
-    res.send(`bank-detail API done. ${msg}`);
   },
   moneyTransfer: (req, res) => {
-    let msg;
-    try {
-      verifySig(req);
-      msg = 'SUCCESS verify-sig';
-    } catch (err) {
-      msg = `ERROR ${err.message}`;
-    }
-    res.send(`money-transfer API done. ${msg}`);
+    // api noi bo
+    // lay bank_code sau do goi api cua partner de thuc hien y/c chuyen tien
   },
   postMoneyTransfer: async (req, res) => {
     let msg;
     try {
-      verifySig(req);
-      msg = 'SUCCESS verify-sig';
-      console.log(req.body);
-
+      // verifySig(req);
       const { type, amount, request_to } = req.body;
-      if (type === 'deposit' && amount > 0) {
-      }
-      if (type === 'withdraw' && amount > 0) {
-      }
+      if (isNaN(amount)) throw new Error('There is error in your request body.');
+      const account = await customerModel.getCustomer(request_to.account_number);
+      if (!account) throw new Error('Account not found.');
 
-      //throw new Error('There is error in your request body.');
+      msg = 'SUCCESS verify';
+      const balance = parseInt(account.checkingAccount.amount);
+      if (type === 'deposit' && amount > 0) {
+        // cong tien
+        const newAmount = balance + amount;
+        await customerModel.updateCheckingAmount(request_to.account_number, newAmount);
+      } else if (type === 'withdraw' && amount > 0) {
+        if (balance < amount) throw new Error("This account's balance is not enough to process.");
+        // tru tien
+        const newAmount = balance - amount;
+        await customerModel.updateCheckingAmount(request_to.account_number, newAmount);
+      } else {
+        throw new Error('There is error in your request body.');
+      }
     } catch (err) {
-      msg = `ERROR ${err.message}`;
+      msg = `ERROR: ${err.message}`;
     }
-    res.send(`money-transfer API done.
-      ${msg}`);
+    res.json({ result: `${msg}` });
   },
 };
