@@ -7,7 +7,7 @@ const logger = require('morgan');
 const connectDB = require('./dbs');
 
 const indexRoute = require('./routes/index');
-const moneyTransferRoute = require('./routes/money-transfer');
+const apiRoute = require('./routes/api');
 const customerRoute = require('./routes/customer');
 const app = express();
 const PORT = 3001;
@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRoute);
-app.use('/money-transfer', moneyTransferRoute);
+app.use('/api', apiRoute);
 app.use('/customers', customerRoute);
 
 // catch 404 and forward to error handler
