@@ -29,7 +29,8 @@
     "mongoose": "^5.9.15",
     "morgan": "^1.10.0",
     "node-rsa": "^1.0.8",
-    "object-hash": "^2.0.3"
+    "object-hash": "^2.0.3",
+    "openpgp": "^4.10.4"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"

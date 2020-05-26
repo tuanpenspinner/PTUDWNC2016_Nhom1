@@ -4,6 +4,7 @@ const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
 const axios = require('axios');
 const moment = require('moment');
+const openpgp = require('openpgp');
 
 const customerModel = require('../models/customer.model');
 
@@ -24,16 +25,16 @@ const MY_BANK_CODE = 'TUB';
 // RSA key-pair
 const rsaPrivateKeyString = fs.readFileSync('rsa_private.key', 'utf8');
 const rsaPublicKeyString = fs.readFileSync('rsa_public.key', 'utf8');
+// PGP key pair
+const pgpPublicKeyString = fs.readFileSync('pgp_public.key', 'utf8');
+const pgpPrivateKeyString = fs.readFileSync('pgp_private.key', 'utf8');
 // partners
-const parterRsaPrivateKeyString = fs.readFileSync('partner_rsa_public.key', 'utf8');
+const parterRsaPublicKeyString = fs.readFileSync('partner_rsa_public.key', 'utf8');
 const partnerPgpPublicKeyString = fs.readFileSync('partner_pgp_public.key', 'utf8');
 
-// load key from PEM string
-const pubKeyRSA = new nodeRSA();
-const priKeyRSA = new nodeRSA();
+const partnerPublicKeyRSA = new nodeRSA();
 
-pubKeyRSA.importKey(rsaPublicKeyString);
-priKeyRSA.importKey(rsaPrivateKeyString);
+partnerPublicKeyRSA.importKey(parterRsaPublicKeyString);
 
 // implement
 function checkSecurity(req, isMoneyAPI = false) {
@@ -62,7 +63,7 @@ function verifySig(req) {
   // console.log('genSig', genSig);
 
   // verify
-  const verification_result = pubKeyRSA.verify(hashString, sig, 'hex', 'hex');
+  const verification_result = partnerPublicKeyRSA.verify(hashString, sig, 'hex', 'hex');
   if (!verification_result) {
     throw new Error('Verify your RSA signature failed.');
   }
@@ -118,7 +119,7 @@ module.exports = {
         account_number: account.checkingAccount.accountNumber,
       });
     } catch (err) {
-      res.json({ error: `${err.message}` });
+      res.status(401).json({ message: `${err.message}` });
     }
   },
   partnerBankDetail: (req, res) => {
@@ -137,7 +138,7 @@ module.exports = {
           'Content-Type': 'application/json',
           'x-partner-code': MY_BANK_CODE,
           'x-partner-request-time': requestTime,
-          'x-partner-hash': hash,
+          'x-partner-hash': hashString,
         };
         axios
           .get(`${PARTNERS[bank_code].apiRoot}/services/account_number/${account_number}`, {
@@ -153,12 +154,62 @@ module.exports = {
         console.log('ERR bank_code wrong');
     }
   },
-  moneyTransfer: (req, res) => {
+  moneyTransfer: async (req, res) => {
     // api noi bo
     // lay bank_code sau do goi api cua partner de thuc hien y/c chuyen tien
+    const { bank_code, amount, request_from, request_to } = req.body;
+    switch (bank_code) {
+      case 'CryptoBank':
+        const signRequest = async (data) => {
+          const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
+          const passphrase = config.PGP_SECRET; // what the private key is encrypted with
+
+          const {
+            keys: [privateKey],
+          } = await openpgp.key.readArmored(privateKeyArmored);
+          await privateKey.decrypt(passphrase);
+
+          const { signature: detachedSignature } = await openpgp.sign({
+            message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
+            privateKeys: [privateKey], // for signing
+            detached: true,
+          });
+          return JSON.stringify(detachedSignature);
+        };
+
+        const body = {
+          partner_code: MY_BANK_CODE,
+          amount: amount,
+          depositor: request_from,
+          receiver: request_to,
+        };
+        const requestTime = moment().format();
+        const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
+        const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
+        const signature = await signRequest(hashString);
+        console.log('signature', signature);
+
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-partner-code': MY_BANK_CODE,
+          'x-partner-request-time': requestTime,
+          'x-partner-hash': hashString,
+        };
+        axios
+          .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${request_to.account_number}`, body, {
+            headers: headers,
+          })
+          .then((res) => {
+            console.log('resss', res);
+            res.json(res.data);
+          })
+          .catch((err) => console.log('ERR', err.message));
+        break;
+      default:
+        console.log('ERR bank_code wrong');
+    }
   },
   postMoneyTransfer: async (req, res) => {
-    let msg;
     try {
       verifySig(req);
       const { type, amount, request_to } = req.body;
@@ -166,7 +217,6 @@ module.exports = {
       const account = await customerModel.getCustomer(request_to.account_number);
       if (!account) throw new Error('Account not found.');
 
-      msg = 'SUCCESS verify';
       const balance = parseInt(account.checkingAccount.amount);
       if (type === 'deposit' && amount > 0) {
         // cong tien
@@ -181,8 +231,8 @@ module.exports = {
         throw new Error('There is error in your request body.');
       }
     } catch (err) {
-      msg = `ERROR: ${err.message}`;
+      res.status(401).json({ error: err.message });
     }
-    res.json({ result: `${msg}` });
+    res.json({ message: 'Your message' });
   },
 };
