@@ -31,15 +31,17 @@ addDeal : async (receiverAccountNumber, transfererAccountNumber, time,amount,con
         throw e;
     }
 },
-updateDeal : async (time, isTransfered)=>{
+updateDeal : async (id, time, isTransfered)=>{
     try {
-        const u = await Deal.update(
-          { 'time': Date.now },
-          { 'isTransfered': true },
-        );
+            const u = await Deal.findOneAndUpdate(
+                {_id: id},
+                { 'time': time },
+                { 'isTransfered': isTransfered },
+            );
+        return u;
         // console.log('uupdate', u);
-      } catch (err) {
+    } catch (err) {
         console.log('ERR', err.message);
-      }
+    }
 },
 };
