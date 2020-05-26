@@ -3,17 +3,19 @@ const jwt = require('jsonwebtoken');
 const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
 const axios = require('axios');
+const moment = require('moment');
 
 const customerModel = require('../models/customer.model');
 
 const PARTNERS = {
   RSA_bank: {
-    bank_code: 'RSA_bank',
+    bank_code: 'RSA_bank', // team Phong Le
     secret: 'hello',
   },
   CryptoBank: {
     bank_code: 'CryptoBank', // team Dang Thanh Tuan
     secret: 'CryptoBank_secret',
+    apiRoot: 'https://crypto-bank-1612785.herokuapp.com/api',
   },
 };
 const MY_BANK_SECRET = 'hiphopneverdie';
@@ -22,6 +24,9 @@ const MY_BANK_CODE = 'TUB';
 // RSA key-pair
 const rsaPrivateKeyString = fs.readFileSync('rsa_private.key', 'utf8');
 const rsaPublicKeyString = fs.readFileSync('rsa_public.key', 'utf8');
+// partners
+const parterRsaPrivateKeyString = fs.readFileSync('partner_rsa_public.key', 'utf8');
+const partnerPgpPublicKeyString = fs.readFileSync('partner_pgp_public.key', 'utf8');
 
 // load key from PEM string
 const pubKeyRSA = new nodeRSA();
@@ -116,6 +121,38 @@ module.exports = {
       res.json({ error: `${err.message}` });
     }
   },
+  partnerBankDetail: (req, res) => {
+    // api noi bo - get thong tin tai khoan ngan hang partners
+    // body = { bank_code, account_number }
+    const { bank_code, account_number } = req.body;
+    switch (bank_code) {
+      case 'CryptoBank':
+        const requestTime = moment().format();
+        const body = {};
+        const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
+        const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
+        console.log('hashssss', hashString, requestTime);
+
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-partner-code': MY_BANK_CODE,
+          'x-partner-request-time': requestTime,
+          'x-partner-hash': hash,
+        };
+        axios
+          .get(`${PARTNERS[bank_code].apiRoot}/services/account_number/${account_number}`, {
+            headers: headers,
+          })
+          .then((res) => {
+            console.log('resss', res);
+            res.json(res.data);
+          })
+          .catch((err) => console.log('ERR', err.message));
+        break;
+      default:
+        console.log('ERR bank_code wrong');
+    }
+  },
   moneyTransfer: (req, res) => {
     // api noi bo
     // lay bank_code sau do goi api cua partner de thuc hien y/c chuyen tien
@@ -123,7 +160,7 @@ module.exports = {
   postMoneyTransfer: async (req, res) => {
     let msg;
     try {
-      // verifySig(req);
+      verifySig(req);
       const { type, amount, request_to } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
       const account = await customerModel.getCustomer(request_to.account_number);

@@ -10,5 +10,6 @@ router.get('/', (req, res) => {
 router.get('/money-transfer', controller.moneyTransfer);
 router.post('/money-transfer', controller.postMoneyTransfer);
 router.get('/bank-detail', controller.bankDetail);
+router.get('/partner-bank-detail', controller.partnerBankDetail);
 
 module.exports = router;
