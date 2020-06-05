@@ -9,6 +9,7 @@ const connectDB = require('./dbs');
 const indexRoute = require('./routes/index');
 const apiRoute = require('./routes/api');
 const customerRoute = require('./routes/customer');
+const employeeRoute = require('./routes/employee');
 const app = express();
 const PORT = 3001;
 
@@ -23,6 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRoute);
 app.use('/api', apiRoute);
 app.use('/customers', customerRoute);
+app.use('/employees', employeeRoute);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
