@@ -54,6 +54,15 @@ module.exports = {
     }
   },
   //cập nhật employee
+  updateEmployee: async (data) => {
+    try {
+      const employee = await Employee.findOneAndUpdate({ username: data.username }, { name: data.name, password: data.password, phone: data.phone, email: data.email}, { runValidators: true });
+      return employee;
+  } catch (e) {
+      console.log("ERROR: "+ e);
+      throw e;
+  }
+  },
   //truy vấn employee theo email
   getEmployee: async (email) => {
     try {

@@ -25,7 +25,7 @@ exports.createEmployee = async (req, res) => {
     const employee = await Employee.createEmployee(newEmployee);
     
     if (!employee) {
-      throw "Tạo tài khoản nhân viên thất bại!";
+      throw {message: "Tạo tài khoản nhân viên thất bại!"};
     }
     
     return res.json({
@@ -45,9 +45,42 @@ exports.createEmployee = async (req, res) => {
 };
 
 //cập nhật tài khản nhân viên
-// exports.updateEmployee = async (req, res) => {
+exports.updateEmployee = async (req, res) => {
+  try {
+    const {name, username, password, phone, email}= req.body;
+    const updateEmployee = {
+      name: name, 
+      username: username, 
+      password: password, 
+      phone: phone, 
+      email: email,
+    }
+    const checkEmployee = await Employee.findByUsername(username);
+    if(!checkEmployee)
+      throw {message: "Nhân viên không tồn tại!"};
 
-// };
+    const updatedEmployee = await Employee.updateEmployee(updateEmployee);    
+    if (!updatedEmployee) {
+      throw {message: "Cập nhật thông tin nhân viên thất bại!"};
+    }
+    
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Cập nhật thông tin nhân viên thành công!",
+      updatedEmployee
+    });
+  } catch (e) {
+    console.log("ERROR: " + e.message);
+    
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: e.message,
+    });
+  }
+};
+
 //xóa nhân viên theo email
 exports.deleteEmployee = async (req, res) => {
   const {email}= req.body;
