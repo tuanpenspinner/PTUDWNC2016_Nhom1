@@ -120,7 +120,7 @@ module.exports = {
         account_number: account.checkingAccount.accountNumber,
       });
     } catch (err) {
-      res.status(401).json({ message: `${err.message}` });
+      res.status(403).json({ message: `${err.message}` });
     }
   },
   partnerBankDetail: (req, res) => {
