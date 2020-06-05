@@ -9,9 +9,10 @@ const openpgp = require('openpgp');
 const customerModel = require('../models/customer.model');
 
 const PARTNERS = {
-  RSA_bank: {
-    bank_code: 'RSA_bank', // team Phong Le
-    secret: 'hello',
+  PPNBank: {
+    bank_code: 'PPNBank', // team Phong Le
+    secret: 'phongledeptrai',
+    apiRoot: 'http://whispering-oasis-78594.herokuapp.com/api',
   },
   CryptoBank: {
     bank_code: 'CryptoBank', // team Dang Thanh Tuan
@@ -42,7 +43,7 @@ function checkSecurity(req, isMoneyAPI = false) {
   // check partner code
   if (!PARTNERS[bank_code]) throw new Error('Your bank_code is not correct.');
   // check time in 1 minute
-  if (Date.now() - parseInt(ts) > 3600) throw new Error('Time exceed.');
+  if (Date.now() - parseInt(ts) > 1000 * 60) throw new Error('Time exceed.');
   // check signature. If money API then ignore check here
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
@@ -125,34 +126,68 @@ module.exports = {
   partnerBankDetail: (req, res) => {
     // api noi bo - get thong tin tai khoan ngan hang partners
     // body = { bank_code, account_number }
-    const { bank_code, account_number } = req.body;
+    const { bank_code, account_number } = req.headers;
+    console.log('hihihihihiihi', req.body, req.headers);
     switch (bank_code) {
       case 'CryptoBank':
-        const requestTime = moment().format();
-        const body = {};
-        const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
-        const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
-        console.log('hashssss', hashString, requestTime);
+        {
+          const requestTime = moment().format();
+          const body = {};
+          const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
+          const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
+          console.log('hashssss', hashString, requestTime);
 
-        const headers = {
-          'Content-Type': 'application/json',
-          'x-partner-code': MY_BANK_CODE,
-          'x-partner-request-time': requestTime,
-          'x-partner-hash': hashString,
-        };
-        axios
-          .get(`${PARTNERS[bank_code].apiRoot}/services/account_number/${account_number}`, {
-            headers: headers,
-          })
-          .then((res) => {
-            console.log('resss', res);
-            res.json(res.data);
-          })
-          .catch((err) => console.log('ERR', err.message));
+          const headers = {
+            'Content-Type': 'application/json',
+            'x-partner-code': MY_BANK_CODE,
+            'x-partner-request-time': requestTime,
+            'x-partner-hash': hashString,
+          };
+          axios
+            .get(`${PARTNERS[bank_code].apiRoot}/services/account_number/${account_number}`, {
+              headers: headers,
+            })
+            .then((res) => {
+              console.log('resss', res);
+              res.json(res.data);
+            })
+            .catch((err) => console.log('ERR', err.message));
+        }
+        break;
+      case 'PPNBank':
+        {
+          const body = {
+            account_number: account_number,
+          };
+          const ts = moment().valueOf();
+          const partnerCode = 'TUB';
+          const secret = PARTNERS.PPNBank.secret;
+          const sig = hash.MD5(partnerCode + '1991388139166' + JSON.stringify(body) + secret);
+
+          const headers = {
+            ts,
+            partnerCode,
+            sig,
+          };
+          console.log('PPN', headers);
+
+          axios
+            .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner`, {
+              headers: headers,
+              data: body,
+            })
+            .then((resuilt) => {
+              console.log('resss', resuilt);
+              res.json(res.data);
+            })
+            .catch((err) => console.log('ERR', err.message));
+        }
         break;
       default:
         console.log('ERR bank_code wrong');
     }
+
+    res.json({});
   },
   moneyTransfer: async (req, res) => {
     // api noi bo
@@ -161,8 +196,9 @@ module.exports = {
     switch (bank_code) {
       case 'CryptoBank':
         const signRequest = async (data) => {
-          const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
-          const passphrase = config.PGP_SECRET; // what the private key is encrypted with
+          // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
+          const privateKeyArmored = pgpPrivateKeyString;
+          const passphrase = 'Hiphop_never_die'; // PGP passphrase
 
           const {
             keys: [privateKey],
