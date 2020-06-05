@@ -87,7 +87,7 @@ exports.loginCustomer = async (req, res) => {
       name: ret.name,
     };
 
-    const accessToken = jwt.sign(payload, "secretKey", {
+    const accessToken = jwt.sign(payload, "secretKeyCustomer", {
       expiresIn: "1d", // 1 day
     });
     res.json({ accessToken: accessToken });

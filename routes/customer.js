@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authCustomer =require('../middleware/auth.customer')
 const customerController= require("../controllers/customer.controller");
 router.get("/list-customer", customerController.getAllCustomers);
 router.get("/:accountNumber", customerController.getCustomer);
