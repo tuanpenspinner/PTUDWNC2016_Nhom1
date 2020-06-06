@@ -8,4 +8,6 @@ router.get("/:accountNumber", customerController.getCustomer);
 router.post("/register", customerController.registerCustomer);//Api đăng kí tài khoản customer
 router.post("/login", customerController.loginCustomer);//Api đăng nhập của customer
 router.post("/changePassword", customerController.changePasswordCustomer);//Api thay đổi mật khẩu
+router.post("/optGenerate", customerController.optGenerate);//Api tạo mã OTP
+router.post("/otpValidate", customerController.otpValidate);//Api xác nhận mã OTP
 module.exports = router;

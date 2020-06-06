@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
+const speakeasy = require("speakeasy");
 
 const checkingAccount0 = new Schema({
   accountNumber: { type: String, required: true, trim: true },
@@ -14,13 +15,16 @@ const receiver = new Schema({
   accountNumber: { type: String, required: true, trim: true }, //số tài khoản thanh toán của người nhận
   name: { type: String, required: true }, //tên thay thế của người nhận
 });
-const moneyRecharge = new Schema({
-  amount: { type: Number, required: true }, //số tiền nạp vào
-  dateRecharge: { type: Date, required: true },
-  accountNumber: { type: String, required: true }, //số tài khoản được nạp tiền
-},{
-  _id: false,
-});
+const moneyRecharge = new Schema(
+  {
+    amount: { type: Number, required: true }, //số tiền nạp vào
+    dateRecharge: { type: Date, required: true },
+    accountNumber: { type: String, required: true }, //số tài khoản được nạp tiền
+  },
+  {
+    _id: false,
+  }
+);
 const customerSchema = new Schema({
   name: { type: String, required: true },
   username: { type: String, required: true, trim: true },
@@ -60,7 +64,10 @@ module.exports = {
   // tìm 1 tài khoản customer theo checkingAccountNumber
   findOneCheckingAccount: async (username, accountNumber) => {
     try {
-      let user = await Customer.findOne({ username: username, "checkingAccount.accountNumber":accountNumber});
+      let user = await Customer.findOne({
+        username: username,
+        "checkingAccount.accountNumber": accountNumber,
+      });
       return user;
     } catch (e) {
       console.log("ERROR: " + e.message);
@@ -69,7 +76,10 @@ module.exports = {
   // tìm 1 tài khoản customer theo savingAccountNumber
   findOneSavingAccount: async (username, accountNumber) => {
     try {
-      let user = await Customer.findOne({ username: username, "savingsAccount.accountNumber":accountNumber});
+      let user = await Customer.findOne({
+        username: username,
+        "savingsAccount.accountNumber": accountNumber,
+      });
       return user;
     } catch (e) {
       console.log("ERROR: " + e.message);
@@ -102,6 +112,29 @@ module.exports = {
       return true;
     }
     return null;
+  },
+  //Tạo mã OTP
+  optGenerate: async (username, email) => {
+    const secret = "secretOTP" + username + email;
+
+    const OTP = speakeasy.totp({
+      secret: secret,
+      encoding: "base32",
+    });
+
+    return OTP;
+  },
+  //Xác nhận mã OTP
+  otpValidate: async (OTP, username, email) => {
+    const secret = "secretOTP" + username + email;
+
+    var tokenValidates = speakeasy.totp.verify({
+      secret: secret,
+      encoding: "base32",
+      token: OTP,
+    });
+
+    return tokenValidates;
   },
 
   //lấy customer theo accountNumber checkingAccount
@@ -145,11 +178,11 @@ module.exports = {
     }
   },
 
-  updateSavingAmount: async (_username,_accountNumber, _newAmount) => {
+  updateSavingAmount: async (_username, _accountNumber, _newAmount) => {
     try {
       const u = await Customer.updateOne(
         { "savingsAccount.accountNumber": _accountNumber, username: _username },
-        { $set: { "savingsAccount.$.amount" : _newAmount } }
+        { $set: { "savingsAccount.$.amount": _newAmount } }
       );
     } catch (err) {
       console.log("ERR", err.message);
@@ -157,14 +190,22 @@ module.exports = {
   },
 
   //thêm lịch sử nạp tiền
-  addHistoryRecharge: async (username, amount, accountNumber,date) => {
+  addHistoryRecharge: async (username, amount, accountNumber, date) => {
     try {
       const u = await Customer.updateOne(
-        {username: username },
-        { $push: { historyMoneyRecharge : {amount: amount,accountNumber: accountNumber,dateRecharge: date} } }
+        { username: username },
+        {
+          $push: {
+            historyMoneyRecharge: {
+              amount: amount,
+              accountNumber: accountNumber,
+              dateRecharge: date,
+            },
+          },
+        }
       );
     } catch (err) {
       console.log("ERR", err.message);
     }
-  }
+  },
 };
