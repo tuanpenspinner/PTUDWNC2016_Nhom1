@@ -120,7 +120,7 @@ module.exports = {
         account_number: account.checkingAccount.accountNumber,
       });
     } catch (err) {
-      res.status(403).json({ message: `${err.message}` });
+      res.status(401).json({ message: `${err.message}` });
     }
   },
   partnerBankDetail: (req, res) => {
@@ -147,40 +147,46 @@ module.exports = {
             .get(`${PARTNERS[bank_code].apiRoot}/services/account_number/${account_number}`, {
               headers: headers,
             })
-            .then((res) => {
-              console.log('resss', res);
-              res.json(res.data);
+            .then((result) => {
+              console.log('resss', result);
+              res.json(result.data);
             })
             .catch((err) => console.log('ERR', err.message));
         }
         break;
       case 'PPNBank':
         {
+          console.log('ppppp');
           const body = {
             account_number: account_number,
           };
           const ts = moment().valueOf();
           const partnerCode = 'TUB';
           const secret = PARTNERS.PPNBank.secret;
-          const sig = hash.MD5(partnerCode + '1991388139166' + JSON.stringify(body) + secret);
+          const sig = hash.MD5('1991388139166' + JSON.stringify(body) + secret);
 
+          console.log(body, ts, partnerCode, secret, sig);
           const headers = {
             ts,
             partnerCode,
             sig,
           };
-          console.log('PPN', headers);
 
           axios
             .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner`, {
               headers: headers,
               data: body,
             })
-            .then((resuilt) => {
-              console.log('resss', resuilt);
+            .then((result) => {
+              console.log('resss', result);
               res.json(res.data);
             })
-            .catch((err) => console.log('ERR', err.message));
+            .catch((err) => console.log('ERRor', err.message));
+
+          axios
+            .get('https://jsonplaceholder.typicode.com/todos/1')
+            .then((result) => console.log('result', result.data))
+            .catch((err) => console.log('ERRor', err.message));
         }
         break;
       default:
