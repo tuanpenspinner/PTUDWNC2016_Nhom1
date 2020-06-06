@@ -18,6 +18,8 @@ const moneyRecharge = new Schema({
   amount: { type: Number, required: true }, //số tiền nạp vào
   dateRecharge: { type: Date, required: true },
   accountNumber: { type: String, required: true }, //số tài khoản được nạp tiền
+},{
+  _id: false,
 });
 const customerSchema = new Schema({
   name: { type: String, required: true },
@@ -55,7 +57,24 @@ module.exports = {
       console.log("ERROR: " + e);
     }
   },
-
+  // tìm 1 tài khoản customer theo checkingAccountNumber
+  findOneCheckingAccount: async (username, accountNumber) => {
+    try {
+      let user = await Customer.findOne({ username: username, "checkingAccount.accountNumber":accountNumber});
+      return user;
+    } catch (e) {
+      console.log("ERROR: " + e.message);
+    }
+  },
+  // tìm 1 tài khoản customer theo savingAccountNumber
+  findOneSavingAccount: async (username, accountNumber) => {
+    try {
+      let user = await Customer.findOne({ username: username, "savingsAccount.accountNumber":accountNumber});
+      return user;
+    } catch (e) {
+      console.log("ERROR: " + e.message);
+    }
+  },
   // Đăng nhập tài khoản customer
   loginCustomer: async (entity) => {
     const customerExist = await Customer.findOne({ username: entity.username });
@@ -125,4 +144,27 @@ module.exports = {
       console.log("ERR", err.message);
     }
   },
+
+  updateSavingAmount: async (_username,_accountNumber, _newAmount) => {
+    try {
+      const u = await Customer.updateOne(
+        { "savingsAccount.accountNumber": _accountNumber, username: _username },
+        { $set: { "savingsAccount.$.amount" : _newAmount } }
+      );
+    } catch (err) {
+      console.log("ERR", err.message);
+    }
+  },
+
+  //thêm lịch sử nạp tiền
+  addHistoryRecharge: async (username, amount, accountNumber,date) => {
+    try {
+      const u = await Customer.updateOne(
+        {username: username },
+        { $push: { historyMoneyRecharge : {amount: amount,accountNumber: accountNumber,dateRecharge: date} } }
+      );
+    } catch (err) {
+      console.log("ERR", err.message);
+    }
+  }
 };

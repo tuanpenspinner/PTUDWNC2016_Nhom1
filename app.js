@@ -4,6 +4,7 @@ const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
 const logger = require('morgan');
+var bodyParser = require("body-parser");
 const connectDB = require('./dbs');
 
 const indexRoute = require('./routes/index');
@@ -15,6 +16,10 @@ const PORT = 3001;
 
 //connect mongodb atlas
 connectDB();
+
+// bodyparser middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use(logger('dev'));
 app.use(express.json());

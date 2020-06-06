@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const bcrypt = require("bcryptjs");
+
 const employeeSchema = new Schema({
   name: {type: String, required: true},
   username: {type: String, required: true},
@@ -33,16 +35,38 @@ module.exports = {
       throw e;
     }
   },
-  //thêm employee
-  createEmployee: async (data) => {
+  // Đăng kí tài khoản employee
+  registerEmployee: async (entity) => {
     try {
-      const employee = await Employee.create({name: data.name,username: data.username, password: data.password, phone: data.phone, email: data.email});
+      const hash = bcrypt.hashSync(entity.password, 10);
+      entity.password = hash;
+      var employee = new Employee(entity);
+      await employee.save();
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
-      throw e;
     }
   },
+// Đăng nhập tài khoản employee
+loginEmployee: async (entity) => {
+  const employeeExist = await Employee.findOne({ username: entity.username });
+  if (employeeExist === null) return null;
+  const password = employeeExist.password;
+  if (bcrypt.compareSync(entity.password, password)) {
+    return employeeExist;
+  }
+  return null;
+},
+  //thêm employee
+  // createEmployee: async (data) => {
+  //   try {
+  //     const employee = await Employee.create({name: data.name,username: data.username, password: data.password, phone: data.phone, email: data.email});
+  //     return employee;
+  //   } catch (e) {
+  //     console.log("ERROR: " + e);
+  //     throw e;
+  //   }
+  // },
   //xóa employee
   deleteEmployee: async (email) => {
     try {
