@@ -49,7 +49,7 @@ module.exports = {
   // Tìm 1 tài khoản customer theo tên
   findOneUserName: async (username) => {
     try {
-      let user = await Customer.findOne({ userName: userName });
+      let user = await Customer.findOne({ username: username });
       return user;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -58,11 +58,29 @@ module.exports = {
 
   // Đăng nhập tài khoản customer
   loginCustomer: async (entity) => {
-    const customerExist = await Customer.findOne({ username: entity.userName });
+    const customerExist = await Customer.findOne({ username: entity.username });
     if (customerExist === null) return null;
     const password = customerExist.password;
     if (bcrypt.compareSync(entity.password, password)) {
       return customerExist;
+    }
+    return null;
+  },
+  // Đổi mật khẩu tài khoản customer
+  changePasswordCustomer: async (entity) => {
+    const customerExist = await Customer.findOne({ username: entity.username });
+    if (customerExist === null) return null;
+    const password = customerExist.password;
+    if (bcrypt.compareSync(entity.password, password)) {
+      const hash = bcrypt.hashSync(entity.newPassword, 10);
+
+      await Customer.findOneAndUpdate(
+        { username: entity.username },
+        {
+          password: hash,
+        }
+      );
+      return true;
     }
     return null;
   },

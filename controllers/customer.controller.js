@@ -12,7 +12,7 @@ exports.getCustomer = async (req, res) => {
     }
 
     return res.json({
-      status: "success",
+      status: "success", 
       code: 2020,
       message: "Lấy thông tin khách hàng thành công!",
       customer,
@@ -98,6 +98,26 @@ exports.loginCustomer = async (req, res) => {
       status: "failed",
       code: 2022,
       message: "Đăng nhập thất bại",
+    });
+  }
+};
+
+//Đổi mật khẩu customer
+exports.changePasswordCustomer = async (req, res) => {
+  try {
+    const entity = req.body;
+    const ret = await Customer.changePasswordCustomer(entity);
+    if (ret === null) return res.json({ message: "Đổi mật khẩu thất bại!" });
+    else {
+      return res.json({ message: "Đổi mật khẩu thành công" });
+    }
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Đổi mật khẩu thất bại",
     });
   }
 };
