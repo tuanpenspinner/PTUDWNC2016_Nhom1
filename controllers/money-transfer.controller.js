@@ -309,6 +309,6 @@ module.exports = {
     } catch (err) {
       res.status(401).json({ message: err.message });
     }
-    res.status(200).end();
+    res.status(200).json({ message: 'Transfer money done' });
   },
 };
