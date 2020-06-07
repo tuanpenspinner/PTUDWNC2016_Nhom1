@@ -291,7 +291,7 @@ module.exports = {
       verifySig(req);
       const { amount, content, transferer, receiver, payFee } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
-      const account = await customerModel.getCustomerByAccount(request_to);
+      const account = await customerModel.getCustomerByAccount(receiver);
       if (!account) throw new Error('Account not found.');
 
       const date = new Date.toString();
