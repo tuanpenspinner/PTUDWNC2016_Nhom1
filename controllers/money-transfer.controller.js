@@ -8,6 +8,7 @@ const moment = require('moment');
 const openpgp = require('openpgp');
 
 const customerModel = require('../models/customer.model');
+const dealModel = require('../models/deal.model');
 
 const PARTNERS = {
   PPNBank: {
@@ -289,22 +290,32 @@ module.exports = {
   postMoneyTransfer: async (req, res) => {
     try {
       verifySig(req);
-      const { amount, request_to } = req.body;
+      const { bank_code, amount, content, transferer, receiver, payFee } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
       const account = await customerModel.getCustomerByAccount(request_to);
       if (!account) throw new Error('Account not found.');
 
+      const date = new Date.toString();
+      let isTrasfered = false;
+      const payFeeBy = payFee;
+      const type = {
+        name: 'receive',
+        bankCode: bank_code,
+      };
       const balance = parseInt(account.checkingAccount.amount);
       if (amount > 0) {
         // cong tien
         const newAmount = balance + amount;
-        await customerModel.updateCheckingAmount(request_to, newAmount);
+        await customerModel.updateCheckingAmount(receiver, newAmount);
+        isTrasfered = true;
       } else {
         throw new Error('There is error in your request body.');
       }
+
+      await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+      res.status(200).json({ message: 'Transfer money done' });
     } catch (err) {
       res.status(401).json({ message: err.message, headers: req.headers });
     }
-    res.status(200).json({ message: 'Transfer money done' });
   },
 };
