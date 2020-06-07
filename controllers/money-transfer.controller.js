@@ -86,11 +86,11 @@ function moneyTransfer() {}
 // body = {
 //   type: 'deposit',
 //   amount: 50000,
-//   request_from: {
+//   transferer: {
 //     account_number: '43154325341',
 //     full_name: 'Name A'
 //   },
-//   request_to: {
+//   receiver: {
 //     account_number: '56154325345',
 //     full_name: 'Name B'
 //   }
@@ -201,7 +201,7 @@ module.exports = {
   moneyTransfer: async (req, res) => {
     // api noi bo
     // lay bank_code sau do goi api cua partner de thuc hien y/c chuyen tien
-    const { bank_code, amount, request_from, request_to } = req.body;
+    const { bank_code, amount, transferer, receiver } = req.body;
     switch (bank_code) {
       case 'CryptoBank':
         {
@@ -226,8 +226,8 @@ module.exports = {
           const body = {
             partner_code: MY_BANK_CODE,
             amount: amount,
-            depositor: request_from,
-            receiver: request_to,
+            depositor: transferer,
+            receiver: receiver,
           };
           const requestTime = moment().format();
           const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
@@ -242,13 +242,9 @@ module.exports = {
             'x-partner-hash': hashString,
           };
           axios
-            .post(
-              `${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${request_to.account_number}`,
-              body,
-              {
-                headers: headers,
-              },
-            )
+            .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${receiver.account_number}`, body, {
+              headers: headers,
+            })
             .then((res) => {
               console.log('resss', res);
               res.json(res.data);
@@ -258,11 +254,11 @@ module.exports = {
         break;
       case 'PPNBank':
         {
-          const { bank_code, amount, request_from, request_to } = req.body;
+          const { bank_code, amount, transferer, receiver } = req.body;
           // sign
           const ts = moment().valueOf();
           const body = {
-            account_number: request_to,
+            account_number: receiver,
             amount: 50000,
           };
           const hashString = hash.MD5(ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
@@ -294,7 +290,7 @@ module.exports = {
       const account = await customerModel.getCustomerByAccount(receiver);
       if (!account) throw new Error('Account not found.');
 
-      const date = new Date.toString();
+      const date = Date.now().toString();
       let isTrasfered = false;
       const payFeeBy = payFee;
       const type = {
