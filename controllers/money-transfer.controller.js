@@ -43,8 +43,8 @@ function checkSecurity(req, isMoneyAPI = false) {
   const { bank_code, sig, ts } = req.headers;
   // check partner code
   if (!PARTNERS[bank_code]) throw new Error('Your bank_code is not correct.');
-  // check time in 10 minute
-  if (Date.now() - parseInt(ts) > 1000 * 60 * 1099) throw new Error('Time exceed.');
+  // check time in 5 minute
+  if (Date.now() - parseInt(ts) > 1000 * 60 * 5) throw new Error('Time exceed.');
   // check signature. If money API then ignore check here
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
@@ -62,8 +62,7 @@ function verifySig(req) {
     switch (bank_code) {
       case 'PPNBank':
         {
-          // const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
-          const sigString = MY_BANK_SECRET;
+          const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
           const hashString = hash.MD5(sigString); // return hex encoding string
           // sign
           // const genSig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
