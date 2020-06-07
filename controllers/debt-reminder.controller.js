@@ -46,16 +46,16 @@ module.exports = {
     if (!reminder) res.status(404).end();
 
     const debtor = await Customer.getCustomerByAccount(reminder.debtor);
-    const { email: userMail, accountNumber } = debtor; // Renaming Variables while Destructuring
+    const userMail = debtor.email;
+    const accountNumber = debtor.checkingAccount.accountNumber;
 
+    console.log(debtor);
     // send mail OTP
     async.waterfall(
       [
         function (done) {
-          crypto.randomBytes(4, function (err, buf) {
-            let otp = Math.floor(Math.random() * 9999 + 1);
-            done(err, otp);
-          });
+          let otp = Math.floor(Math.random() * 9999 + 1);
+          done(err, otp);
         },
         function (otp, done) {
           Customer.updateMailOTP(accountNumber, otp)
@@ -91,7 +91,7 @@ module.exports = {
             console.log('ERR', err.message, process.env.EMAIL_SENDER);
           });
 
-          console.log('gui mail reset done: ', userMail);
+          console.log('gui mail otp done to email: ', userMail);
           // res.status(200).json({ message: 'An email has sent to your email' });
         },
       ],

@@ -2,7 +2,6 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
-const axios = require('axios');
 const superagent = require('superagent');
 const moment = require('moment');
 const openpgp = require('openpgp');
@@ -72,6 +71,10 @@ function verifySig(req) {
           if (!verification_result) {
             throw new Error('Verify your RSA signature failed.');
           }
+        }
+        break;
+      case 'PGP':
+        {
         }
         break;
       default:
@@ -254,27 +257,44 @@ module.exports = {
         break;
       case 'PPNBank':
         {
-          const { bank_code, amount, transferer, receiver } = req.body;
+          const { bank_code, content, amount, transferer, receiver, payFee } = req.body;
           // sign
           const ts = moment().valueOf();
           const body = {
-            account_number: receiver,
-            amount: 50000,
+            amount,
+            content,
+            transferer,
+            receiver,
+            payFee,
           };
-          const hashString = hash.MD5(ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
+          const hashString = hash.MD5(MY_BANK_CODE + ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
           const sig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
           const headers = {
             ts,
             bank_code: MY_BANK_CODE,
             sig,
           };
+          let isTrasfered = false;
+          const date = Date.now().toString();
+          const payFeeBy = payFee;
+          const type = {
+            name: 'transfer',
+            bankCode: bank_code,
+          };
 
           superagent
-            .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner/transfer`)
+            .post(`${PARTNERS[bank_code].apiRoot}/accounts/partner/transfer`)
             .send(body)
             .set(headers)
-            .end((err, result) => {
-              res.status(200).json(JSON.parse(result.text));
+            .end(async (err, result) => {
+              const account = await customerModel.getCustomerByAccount(transferer);
+              const balance = parseInt(account.checkingAccount.amount);
+              const newAmount = balance - amount;
+              await customerModel.updateCheckingAmount(transferer, newAmount);
+              isTrasfered = true;
+              await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+              console.log(result);
+              res.status(200).json({});
             });
         }
         break;

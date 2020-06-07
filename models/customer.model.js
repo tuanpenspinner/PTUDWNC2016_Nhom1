@@ -2,14 +2,24 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
 
-const checkingAccount0 = new Schema({
-  accountNumber: { type: String, required: true, trim: true },
-  amount: { type: Number, min: 0, default: 0, required: true },
-});
-const savingAccount = new Schema({
-  accountNumber: { type: String, required: true, trim: true },
-  amount: { type: Number, min: 0, required: true },
-});
+const checkingAccount0 = new Schema(
+  {
+    accountNumber: { type: String, required: true, trim: true },
+    amount: { type: Number, min: 0, default: 0, required: true },
+  },
+  {
+    _id: false,
+  },
+);
+const savingAccount = new Schema(
+  {
+    accountNumber: { type: String, required: true, trim: true },
+    amount: { type: Number, min: 0, required: true },
+  },
+  {
+    _id: false,
+  },
+);
 const receiver = new Schema(
   {
     accountNumber: { type: String, required: true, trim: true }, //số tài khoản thanh toán của người nhận
@@ -190,5 +200,15 @@ module.exports = {
   updateMailOTP: async (accountNumber, otp) => {
     issueAt = Date.now();
     await Customer.updateOne({ 'checkingAccount.accountNumber': accountNumber }, { mailOtp: { otp, issueAt } });
+  },
+
+  checkMailOTP: async (accountNumber, otp) => {
+    const mailOtp = await Customer.updateOne(
+      { 'checkingAccount.accountNumber': accountNumber },
+      { mailOtp: { otp, issueAt } },
+    );
+    console.log(mailOtp);
+    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp) return false;
+    return true;
   },
 };
