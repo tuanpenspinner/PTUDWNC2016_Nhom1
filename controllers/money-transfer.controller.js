@@ -53,20 +53,29 @@ function checkSecurity(req, isMoneyAPI = false) {
 }
 
 function verifySig(req) {
-  checkSecurity(req, true);
-  const { bank_code, sig, ts } = req.headers;
+  try {
+    checkSecurity(req, true);
+    const { bank_code, sig, ts } = req.headers;
 
-  const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
-  const hashString = hash.MD5(sigString); // return hex encoding string
-
-  // sign
-  // const genSig = priKeyRSA.sign(hashString, 'hex', 'hex');
-  // console.log('genSig', genSig);
-
-  // verify
-  const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
-  if (!verification_result) {
-    throw new Error('Verify your RSA signature failed.');
+    // verify
+    switch (bank_code) {
+      case 'PPNBank':
+        {
+          const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
+          const hashString = hash.MD5(sigString); // return hex encoding string
+          // sign
+          // const genSig = priKeyRSA.sign(hashString, 'hex', 'hex');
+          // console.log('genSig', genSig);
+          const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
+          if (!verification_result) {
+            throw new Error('Verify your RSA signature failed.');
+          }
+        }
+        break;
+      default:
+    }
+  } catch (err) {
+    throw new Error(err.message);
   }
 }
 
@@ -268,7 +277,6 @@ module.exports = {
             .send(body)
             .set(headers)
             .end((err, result) => {
-              // const name = JSON.parse(result.res.text).name;
               res.status(200).json(JSON.parse(result.text));
             });
         }
