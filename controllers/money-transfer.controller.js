@@ -68,7 +68,7 @@ function verifySig(req) {
           // sign
           // const genSig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
           // console.log('genSig', genSig);
-          const verification_result = parterRsaPublicKeyString.verify(hashString, sig, 'hex', 'hex');
+          const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
           if (!verification_result) {
             throw new Error('Verify your RSA signature failed.');
           }
