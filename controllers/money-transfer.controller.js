@@ -138,7 +138,6 @@ module.exports = {
     // api noi bo - get thong tin tai khoan ngan hang partners
     // body = { bank_code, account_number }
     const { bank_code, account_number } = req.headers;
-    console.log('hihihihihiihi', req.body, req.headers);
     switch (bank_code) {
       case 'CryptoBank':
         {
@@ -290,7 +289,7 @@ module.exports = {
   postMoneyTransfer: async (req, res) => {
     try {
       verifySig(req);
-      const { bank_code, amount, content, transferer, receiver, payFee } = req.body;
+      const { amount, content, transferer, receiver, payFee } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
       const account = await customerModel.getCustomerByAccount(request_to);
       if (!account) throw new Error('Account not found.');
@@ -300,7 +299,7 @@ module.exports = {
       const payFeeBy = payFee;
       const type = {
         name: 'receive',
-        bankCode: bank_code,
+        bankCode: req.headers.bank_code,
       };
       const balance = parseInt(account.checkingAccount.amount);
       if (amount > 0) {
