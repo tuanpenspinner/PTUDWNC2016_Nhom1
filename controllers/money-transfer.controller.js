@@ -12,7 +12,7 @@ const PARTNERS = {
   PPNBank: {
     bank_code: 'PPNBank', // team Phong Le
     secret: 'phongledeptrai',
-    apiRoot: 'http://whispering-oasis-78594.herokuapp.com/api',
+    apiRoot: 'https://whispering-oasis-78594.herokuapp.com/api',
   },
   CryptoBank: {
     bank_code: 'CryptoBank', // team Dang Thanh Tuan
@@ -113,7 +113,7 @@ module.exports = {
       if (!account_number) throw new Error('account_number is missing in request body.');
 
       checkSecurity(req);
-      const account = await customerModel.getCustomer(account_number);
+      const account = await customerModel.getCustomerByAccount(account_number);
       if (!account) throw new Error('Account not found.');
       res.json({
         name: account.name,
@@ -170,8 +170,10 @@ module.exports = {
             ts,
             partnerCode,
             sig,
+            'Content-Type': 'application/json',
           };
 
+          console.log('api', `${PARTNERS[bank_code].apiRoot}/accounts/partner`);
           axios
             .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner`, {
               headers: headers,
@@ -181,11 +183,6 @@ module.exports = {
               console.log('resss', result);
               res.json(res.data);
             })
-            .catch((err) => console.log('ERRor', err.message));
-
-          axios
-            .get('https://jsonplaceholder.typicode.com/todos/1')
-            .then((result) => console.log('result', result.data))
             .catch((err) => console.log('ERRor', err.message));
         }
         break;
@@ -256,7 +253,7 @@ module.exports = {
       verifySig(req);
       const { type, amount, request_to } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
-      const account = await customerModel.getCustomer(request_to.account_number);
+      const account = await customerModel.getCustomerByAccount(request_to.account_number);
       if (!account) throw new Error('Account not found.');
 
       const balance = parseInt(account.checkingAccount.amount);
@@ -273,8 +270,8 @@ module.exports = {
         throw new Error('There is error in your request body.');
       }
     } catch (err) {
-      res.status(401).json({ error: err.message });
+      res.status(401).json({ message: err.message });
     }
-    res.json({ message: 'Your message' });
+    res.status(200).end();
   },
 };
