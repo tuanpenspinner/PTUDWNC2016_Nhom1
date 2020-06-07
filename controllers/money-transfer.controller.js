@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
 const axios = require('axios');
+const superagent = require('superagent');
 const moment = require('moment');
 const openpgp = require('openpgp');
 
@@ -33,9 +34,8 @@ const pgpPrivateKeyString = fs.readFileSync('pgp_private.key', 'utf8');
 const parterRsaPublicKeyString = fs.readFileSync('partner_rsa_public.key', 'utf8');
 const partnerPgpPublicKeyString = fs.readFileSync('partner_pgp_public.key', 'utf8');
 
-const partnerPublicKeyRSA = new nodeRSA();
-
-partnerPublicKeyRSA.importKey(parterRsaPublicKeyString);
+const rsaPrivateKey = new nodeRSA().importKey(rsaPrivateKeyString);
+const partnerRSAPublicKey = new nodeRSA().importKey(parterRsaPublicKeyString);
 
 // implement
 function checkSecurity(req, isMoneyAPI = false) {
@@ -48,7 +48,7 @@ function checkSecurity(req, isMoneyAPI = false) {
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
   const hashString = hash.MD5(sigString);
-  console.log('hashStr', hashString);
+  console.log('hashStr', ts, hashString);
   if (sig !== hashString) throw new Error('Signature failed.');
 }
 
@@ -64,7 +64,7 @@ function verifySig(req) {
   // console.log('genSig', genSig);
 
   // verify
-  const verification_result = partnerPublicKeyRSA.verify(hashString, sig, 'hex', 'hex');
+  const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
   if (!verification_result) {
     throw new Error('Verify your RSA signature failed.');
   }
@@ -156,14 +156,13 @@ module.exports = {
         break;
       case 'PPNBank':
         {
-          console.log('ppppp');
           const body = {
             account_number: account_number,
           };
           const ts = moment().valueOf();
           const partnerCode = 'TUB';
           const secret = PARTNERS.PPNBank.secret;
-          const sig = hash.MD5('1991388139166' + JSON.stringify(body) + secret);
+          const sig = hash.MD5(ts + JSON.stringify(body) + secret);
 
           console.log(body, ts, partnerCode, secret, sig);
           const headers = {
@@ -173,24 +172,21 @@ module.exports = {
             'Content-Type': 'application/json',
           };
 
-          console.log('api', `${PARTNERS[bank_code].apiRoot}/accounts/partner`);
-          axios
-            .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner`, {
-              headers: headers,
-              data: body,
-            })
-            .then((result) => {
-              console.log('resss', result);
-              res.json(res.data);
-            })
-            .catch((err) => console.log('ERRor', err.message));
+          superagent
+            .post(`${PARTNERS[bank_code].apiRoot}/accounts/partner`)
+            .send(body)
+            .set(headers)
+            .end((err, result) => {
+              const name = JSON.parse(result.res.text).name;
+              res.status(200).json({ account_number, name });
+            });
         }
         break;
       default:
         console.log('ERR bank_code wrong');
     }
 
-    res.json({});
+    // res.json({});
   },
   moneyTransfer: async (req, res) => {
     // api noi bo
@@ -198,51 +194,84 @@ module.exports = {
     const { bank_code, amount, request_from, request_to } = req.body;
     switch (bank_code) {
       case 'CryptoBank':
-        const signRequest = async (data) => {
-          // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
-          const privateKeyArmored = pgpPrivateKeyString;
-          const passphrase = 'Hiphop_never_die'; // PGP passphrase
+        {
+          const signRequest = async (data) => {
+            // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
+            const privateKeyArmored = pgpPrivateKeyString;
+            const passphrase = 'Hiphop_never_die'; // PGP passphrase
 
-          const {
-            keys: [privateKey],
-          } = await openpgp.key.readArmored(privateKeyArmored);
-          await privateKey.decrypt(passphrase);
+            const {
+              keys: [privateKey],
+            } = await openpgp.key.readArmored(privateKeyArmored);
+            await privateKey.decrypt(passphrase);
 
-          const { signature: detachedSignature } = await openpgp.sign({
-            message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
-            privateKeys: [privateKey], // for signing
-            detached: true,
-          });
-          return JSON.stringify(detachedSignature);
-        };
+            const { signature: detachedSignature } = await openpgp.sign({
+              message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
+              privateKeys: [privateKey], // for signing
+              detached: true,
+            });
+            return JSON.stringify(detachedSignature);
+          };
 
-        const body = {
-          partner_code: MY_BANK_CODE,
-          amount: amount,
-          depositor: request_from,
-          receiver: request_to,
-        };
-        const requestTime = moment().format();
-        const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
-        const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
-        const signature = await signRequest(hashString);
-        console.log('signature', signature);
+          const body = {
+            partner_code: MY_BANK_CODE,
+            amount: amount,
+            depositor: request_from,
+            receiver: request_to,
+          };
+          const requestTime = moment().format();
+          const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
+          const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
+          const signature = await signRequest(hashString);
+          console.log('signature', signature);
 
-        const headers = {
-          'Content-Type': 'application/json',
-          'x-partner-code': MY_BANK_CODE,
-          'x-partner-request-time': requestTime,
-          'x-partner-hash': hashString,
-        };
-        axios
-          .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${request_to.account_number}`, body, {
-            headers: headers,
-          })
-          .then((res) => {
-            console.log('resss', res);
-            res.json(res.data);
-          })
-          .catch((err) => console.log('ERR', err.message));
+          const headers = {
+            'Content-Type': 'application/json',
+            'x-partner-code': MY_BANK_CODE,
+            'x-partner-request-time': requestTime,
+            'x-partner-hash': hashString,
+          };
+          axios
+            .post(
+              `${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${request_to.account_number}`,
+              body,
+              {
+                headers: headers,
+              },
+            )
+            .then((res) => {
+              console.log('resss', res);
+              res.json(res.data);
+            })
+            .catch((err) => console.log('ERR', err.message));
+        }
+        break;
+      case 'PPNBank':
+        {
+          const { bank_code, amount, request_from, request_to } = req.body;
+          // sign
+          const ts = moment().valueOf();
+          const body = {
+            account_number: request_to,
+            amount: 50000,
+          };
+          const hashString = hash.MD5(ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
+          const sig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
+          const headers = {
+            ts,
+            bank_code: MY_BANK_CODE,
+            sig,
+          };
+
+          superagent
+            .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner/transfer`)
+            .send(body)
+            .set(headers)
+            .end((err, result) => {
+              // const name = JSON.parse(result.res.text).name;
+              res.status(200).json(JSON.parse(result.text));
+            });
+        }
         break;
       default:
         console.log('ERR bank_code wrong');
