@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
 const speakeasy = require("speakeasy");
+const nodemailer = require("nodemailer");
 
 const checkingAccount0 = new Schema({
   accountNumber: { type: String, required: true, trim: true },
@@ -114,7 +115,7 @@ module.exports = {
     return null;
   },
   //Tạo mã OTP
-  optGenerate: async (username, email) => {
+  otpGenerate: async (username, email) => {
     const secret = "secretOTP" + username + email;
 
     const OTP = speakeasy.totp({
@@ -135,6 +136,32 @@ module.exports = {
     });
 
     return tokenValidates;
+  },
+  //Gửi mã OTP đễn email customer
+  sendOTP: async (OTP, email) => {
+    var transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "internetbankingnhom1@gmail.com",
+        pass: "nhom1234",
+      },
+    });
+
+    var mailOptions = {
+      from: "internetbankingnhom1@gmail.com",
+      to: email,
+      subject: "Forget password",
+      text: "OTP Code",
+      html: `<b>Mã OTP để reset password của bạn là: ${OTP}</b>`,
+    };
+    transporter.sendMail(mailOptions, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+      }
+    });
+    return true;
   },
 
   //lấy customer theo accountNumber checkingAccount

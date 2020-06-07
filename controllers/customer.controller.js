@@ -122,13 +122,10 @@ exports.changePasswordCustomer = async (req, res) => {
   }
 };
 //Tạo mã OTP
-exports.optGenerate = async (req, res) => {
+exports.otpGenerate = async (req, res) => {
   try {
     const entity = req.body;
-    const ret = await Customer.optGenerate(
-      entity.username,
-      entity.email
-    );
+    const ret = await Customer.otpGenerate(entity.username, entity.email);
     if (ret === null) return res.json({ message: "Không trả về mã OTP" });
     else {
       return res.json({ OTP: ret });
@@ -156,6 +153,21 @@ exports.otpValidate = async (req, res) => {
     else {
       return res.json({ "Xác nhận OTP": ret });
     }
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Reset khẩu thất bại",
+    });
+  }
+};
+exports.sendOTP = async (req, res) => {
+  try {
+    const entity = req.body;
+    await Customer.sendOTP(entity.OTP, entity.email);
+    res.json({ "Thông báo": `Đã gửi OTP tới địa chỉ ${entity.email}` });
   } catch (e) {
     console.log("ERROR: " + e);
 
