@@ -288,21 +288,16 @@ module.exports = {
   postMoneyTransfer: async (req, res) => {
     try {
       verifySig(req);
-      const { type, amount, request_to } = req.body;
+      const { amount, request_to } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
-      const account = await customerModel.getCustomerByAccount(request_to.account_number);
+      const account = await customerModel.getCustomerByAccount(request_to);
       if (!account) throw new Error('Account not found.');
 
       const balance = parseInt(account.checkingAccount.amount);
-      if (type === 'deposit' && amount > 0) {
+      if (amount > 0) {
         // cong tien
         const newAmount = balance + amount;
-        await customerModel.updateCheckingAmount(request_to.account_number, newAmount);
-      } else if (type === 'withdraw' && amount > 0) {
-        if (balance < amount) throw new Error("This account's balance is not enough to process.");
-        // tru tien
-        const newAmount = balance - amount;
-        await customerModel.updateCheckingAmount(request_to.account_number, newAmount);
+        await customerModel.updateCheckingAmount(request_to, newAmount);
       } else {
         throw new Error('There is error in your request body.');
       }
