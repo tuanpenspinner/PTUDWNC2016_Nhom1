@@ -42,8 +42,8 @@ function checkSecurity(req, isMoneyAPI = false) {
   const { bank_code, sig, ts } = req.headers;
   // check partner code
   if (!PARTNERS[bank_code]) throw new Error('Your bank_code is not correct.');
-  // check time in 1 minute
-  if (Date.now() - parseInt(ts) > 1000 * 60) throw new Error('Time exceed.');
+  // check time in 10 minute
+  if (Date.now() - parseInt(ts) > 1000 * 60 * 10) throw new Error('Time exceed.');
   // check signature. If money API then ignore check here
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
@@ -302,7 +302,7 @@ module.exports = {
         throw new Error('There is error in your request body.');
       }
     } catch (err) {
-      res.status(401).json({ message: err.message });
+      res.status(401).json({ message: err.message, headers: req.headers });
     }
     res.status(200).json({ message: 'Transfer money done' });
   },
