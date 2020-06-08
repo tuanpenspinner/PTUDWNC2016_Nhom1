@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
+const speakeasy = require("speakeasy");
+const nodemailer = require("nodemailer");
 
 const checkingAccount0 = new Schema(
   {
@@ -88,7 +90,10 @@ module.exports = {
   // tìm 1 tài khoản customer theo checkingAccountNumber
   findOneCheckingAccount: async (username, accountNumber) => {
     try {
-      let user = await Customer.findOne({ username: username, 'checkingAccount.accountNumber': accountNumber });
+      let user = await Customer.findOne({
+        username: username,
+        "checkingAccount.accountNumber": accountNumber,
+      });
       return user;
     } catch (e) {
       console.log('ERROR: ' + e.message);
@@ -97,7 +102,10 @@ module.exports = {
   // tìm 1 tài khoản customer theo savingAccountNumber
   findOneSavingAccount: async (username, accountNumber) => {
     try {
-      let user = await Customer.findOne({ username: username, 'savingsAccount.accountNumber': accountNumber });
+      let user = await Customer.findOne({
+        username: username,
+        "savingsAccount.accountNumber": accountNumber,
+      });
       return user;
     } catch (e) {
       console.log('ERROR: ' + e.message);
@@ -130,6 +138,55 @@ module.exports = {
       return true;
     }
     return null;
+  },
+  //Tạo mã OTP
+  otpGenerate: async (username, email) => {
+    const secret = "secretOTP" + username + email;
+
+    const OTP = speakeasy.totp({
+      secret: secret,
+      encoding: "base32",
+    });
+
+    return OTP;
+  },
+  //Xác nhận mã OTP
+  otpValidate: async (OTP, username, email) => {
+    const secret = "secretOTP" + username + email;
+
+    var tokenValidates = speakeasy.totp.verify({
+      secret: secret,
+      encoding: "base32",
+      token: OTP,
+    });
+
+    return tokenValidates;
+  },
+  //Gửi mã OTP đễn email customer
+  sendOTP: async (OTP, email) => {
+    var transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "internetbankingnhom1@gmail.com",
+        pass: "nhom1234",
+      },
+    });
+
+    var mailOptions = {
+      from: "internetbankingnhom1@gmail.com",
+      to: email,
+      subject: "Forget password",
+      text: "OTP Code",
+      html: `<b>Mã OTP để reset password của bạn là: ${OTP}</b>`,
+    };
+    transporter.sendMail(mailOptions, function (error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+      }
+    });
+    return true;
   },
 
   //lấy customer theo accountNumber checkingAccount
@@ -189,7 +246,15 @@ module.exports = {
     try {
       const u = await Customer.updateOne(
         { username: username },
-        { $push: { historyMoneyRecharge: { amount: amount, accountNumber: accountNumber, dateRecharge: date } } },
+        {
+          $push: {
+            historyMoneyRecharge: {
+              amount: amount,
+              accountNumber: accountNumber,
+              dateRecharge: date,
+            },
+          },
+        }
       );
     } catch (err) {
       console.log('ERR', err.message);
