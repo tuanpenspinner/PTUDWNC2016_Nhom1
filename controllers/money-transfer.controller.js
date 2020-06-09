@@ -2,17 +2,18 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
-const axios = require('axios');
+const superagent = require('superagent');
 const moment = require('moment');
 const openpgp = require('openpgp');
 
 const customerModel = require('../models/customer.model');
+const dealModel = require('../models/deal.model');
 
 const PARTNERS = {
   PPNBank: {
     bank_code: 'PPNBank', // team Phong Le
     secret: 'phongledeptrai',
-    apiRoot: 'http://whispering-oasis-78594.herokuapp.com/api',
+    apiRoot: 'https://whispering-oasis-78594.herokuapp.com/api',
   },
   CryptoBank: {
     bank_code: 'CryptoBank', // team Dang Thanh Tuan
@@ -33,40 +34,53 @@ const pgpPrivateKeyString = fs.readFileSync('pgp_private.key', 'utf8');
 const parterRsaPublicKeyString = fs.readFileSync('partner_rsa_public.key', 'utf8');
 const partnerPgpPublicKeyString = fs.readFileSync('partner_pgp_public.key', 'utf8');
 
-const partnerPublicKeyRSA = new nodeRSA();
-
-partnerPublicKeyRSA.importKey(parterRsaPublicKeyString);
+const rsaPrivateKey = new nodeRSA().importKey(rsaPrivateKeyString);
+const rsaPublicKey = new nodeRSA().importKey(rsaPublicKeyString);
+const partnerRSAPublicKey = new nodeRSA().importKey(parterRsaPublicKeyString);
 
 // implement
 function checkSecurity(req, isMoneyAPI = false) {
   const { bank_code, sig, ts } = req.headers;
   // check partner code
   if (!PARTNERS[bank_code]) throw new Error('Your bank_code is not correct.');
-  // check time in 1 minute
-  if (Date.now() - parseInt(ts) > 1000 * 60) throw new Error('Time exceed.');
+  // check time in 5 minute
+  if (Date.now() - parseInt(ts) > 1000 * 60 * 5) throw new Error('Time exceed.');
   // check signature. If money API then ignore check here
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
   const hashString = hash.MD5(sigString);
-  console.log('hashStr', hashString);
+  console.log('hashStr', ts, hashString);
   if (sig !== hashString) throw new Error('Signature failed.');
 }
 
 function verifySig(req) {
-  checkSecurity(req, true);
-  const { bank_code, sig, ts } = req.headers;
+  try {
+    checkSecurity(req, true);
+    const { bank_code, sig, ts } = req.headers;
 
-  const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
-  const hashString = hash.MD5(sigString); // return hex encoding string
-
-  // sign
-  // const genSig = priKeyRSA.sign(hashString, 'hex', 'hex');
-  // console.log('genSig', genSig);
-
-  // verify
-  const verification_result = partnerPublicKeyRSA.verify(hashString, sig, 'hex', 'hex');
-  if (!verification_result) {
-    throw new Error('Verify your RSA signature failed.');
+    // verify
+    switch (bank_code) {
+      case 'PPNBank':
+        {
+          const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
+          const hashString = hash.MD5(sigString); // return hex encoding string
+          // sign
+          // const genSig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
+          // console.log('genSig', genSig);
+          const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
+          if (!verification_result) {
+            throw new Error('Verify your RSA signature failed.');
+          }
+        }
+        break;
+      case 'PGP':
+        {
+        }
+        break;
+      default:
+    }
+  } catch (err) {
+    throw new Error(err.message);
   }
 }
 
@@ -75,11 +89,11 @@ function moneyTransfer() {}
 // body = {
 //   type: 'deposit',
 //   amount: 50000,
-//   request_from: {
+//   transferer: {
 //     account_number: '43154325341',
 //     full_name: 'Name A'
 //   },
-//   request_to: {
+//   receiver: {
 //     account_number: '56154325345',
 //     full_name: 'Name B'
 //   }
@@ -113,7 +127,7 @@ module.exports = {
       if (!account_number) throw new Error('account_number is missing in request body.');
 
       checkSecurity(req);
-      const account = await customerModel.getCustomer(account_number);
+      const account = await customerModel.getCustomerByAccount(account_number);
       if (!account) throw new Error('Account not found.');
       res.json({
         name: account.name,
@@ -127,7 +141,6 @@ module.exports = {
     // api noi bo - get thong tin tai khoan ngan hang partners
     // body = { bank_code, account_number }
     const { bank_code, account_number } = req.headers;
-    console.log('hihihihihiihi', req.body, req.headers);
     switch (bank_code) {
       case 'CryptoBank':
         {
@@ -156,96 +169,134 @@ module.exports = {
         break;
       case 'PPNBank':
         {
-          console.log('ppppp');
           const body = {
             account_number: account_number,
           };
           const ts = moment().valueOf();
           const partnerCode = 'TUB';
           const secret = PARTNERS.PPNBank.secret;
-          const sig = hash.MD5('1991388139166' + JSON.stringify(body) + secret);
+          const sig = hash.MD5(ts + JSON.stringify(body) + secret);
 
           console.log(body, ts, partnerCode, secret, sig);
           const headers = {
             ts,
             partnerCode,
             sig,
+            'Content-Type': 'application/json',
           };
 
-          axios
-            .get(`${PARTNERS[bank_code].apiRoot}/accounts/partner`, {
-              headers: headers,
-              data: body,
-            })
-            .then((result) => {
-              console.log('resss', result);
-              res.json(res.data);
-            })
-            .catch((err) => console.log('ERRor', err.message));
-
-          axios
-            .get('https://jsonplaceholder.typicode.com/todos/1')
-            .then((result) => console.log('result', result.data))
-            .catch((err) => console.log('ERRor', err.message));
+          superagent
+            .post(`${PARTNERS[bank_code].apiRoot}/accounts/partner`)
+            .send(body)
+            .set(headers)
+            .end((err, result) => {
+              const name = JSON.parse(result.res.text).name;
+              res.status(200).json({ account_number, name });
+            });
         }
         break;
       default:
         console.log('ERR bank_code wrong');
     }
 
-    res.json({});
+    // res.json({});
   },
   moneyTransfer: async (req, res) => {
     // api noi bo
     // lay bank_code sau do goi api cua partner de thuc hien y/c chuyen tien
-    const { bank_code, amount, request_from, request_to } = req.body;
+    const { bank_code, amount, transferer, receiver } = req.body;
     switch (bank_code) {
       case 'CryptoBank':
-        const signRequest = async (data) => {
-          // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
-          const privateKeyArmored = pgpPrivateKeyString;
-          const passphrase = 'Hiphop_never_die'; // PGP passphrase
+        {
+          const signRequest = async (data) => {
+            // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
+            const privateKeyArmored = pgpPrivateKeyString;
+            const passphrase = 'Hiphop_never_die'; // PGP passphrase
 
-          const {
-            keys: [privateKey],
-          } = await openpgp.key.readArmored(privateKeyArmored);
-          await privateKey.decrypt(passphrase);
+            const {
+              keys: [privateKey],
+            } = await openpgp.key.readArmored(privateKeyArmored);
+            await privateKey.decrypt(passphrase);
 
-          const { signature: detachedSignature } = await openpgp.sign({
-            message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
-            privateKeys: [privateKey], // for signing
-            detached: true,
-          });
-          return JSON.stringify(detachedSignature);
-        };
+            const { signature: detachedSignature } = await openpgp.sign({
+              message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
+              privateKeys: [privateKey], // for signing
+              detached: true,
+            });
+            return JSON.stringify(detachedSignature);
+          };
 
-        const body = {
-          partner_code: MY_BANK_CODE,
-          amount: amount,
-          depositor: request_from,
-          receiver: request_to,
-        };
-        const requestTime = moment().format();
-        const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
-        const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
-        const signature = await signRequest(hashString);
-        console.log('signature', signature);
+          const body = {
+            partner_code: MY_BANK_CODE,
+            amount: amount,
+            depositor: transferer,
+            receiver: receiver,
+          };
+          const requestTime = moment().format();
+          const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
+          const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
+          const signature = await signRequest(hashString);
+          console.log('signature', signature);
 
-        const headers = {
-          'Content-Type': 'application/json',
-          'x-partner-code': MY_BANK_CODE,
-          'x-partner-request-time': requestTime,
-          'x-partner-hash': hashString,
-        };
-        axios
-          .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${request_to.account_number}`, body, {
-            headers: headers,
-          })
-          .then((res) => {
-            console.log('resss', res);
-            res.json(res.data);
-          })
-          .catch((err) => console.log('ERR', err.message));
+          const headers = {
+            'Content-Type': 'application/json',
+            'x-partner-code': MY_BANK_CODE,
+            'x-partner-request-time': requestTime,
+            'x-partner-hash': hashString,
+          };
+          axios
+            .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${receiver.account_number}`, body, {
+              headers: headers,
+            })
+            .then((res) => {
+              console.log('resss', res);
+              res.json(res.data);
+            })
+            .catch((err) => console.log('ERR', err.message));
+        }
+        break;
+      case 'PPNBank':
+        {
+          const { bank_code, content, amount, transferer, receiver, payFee } = req.body;
+          // sign
+          const ts = moment().valueOf();
+          const body = {
+            amount,
+            content,
+            transferer,
+            receiver,
+            payFee,
+          };
+          const hashString = hash.MD5(MY_BANK_CODE + ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
+          const sig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
+          const headers = {
+            ts,
+            bank_code: MY_BANK_CODE,
+            sig,
+          };
+          let isTrasfered = false;
+          const date = Date.now().toString();
+          const payFeeBy = payFee;
+          const type = {
+            name: 'transfer',
+            bankCode: bank_code,
+          };
+
+          superagent
+            .post(`${PARTNERS[bank_code].apiRoot}/accounts/partner/transfer`)
+            .send(body)
+            .set(headers)
+            .end(async (err, result) => {
+              const account = await customerModel.getCustomerByAccount(transferer);
+              const balance = parseInt(account.checkingAccount.amount);
+              const newAmount = balance - amount;
+              await customerModel.updateCheckingAmount(transferer, newAmount);
+              isTrasfered = true;
+              await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+              console.log(result);
+              res.status(200).json({});
+            });
+        }
         break;
       default:
         console.log('ERR bank_code wrong');
@@ -254,27 +305,32 @@ module.exports = {
   postMoneyTransfer: async (req, res) => {
     try {
       verifySig(req);
-      const { type, amount, request_to } = req.body;
+      const { amount, content, transferer, receiver, payFee } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
-      const account = await customerModel.getCustomer(request_to.account_number);
+      const account = await customerModel.getCustomerByAccount(receiver);
       if (!account) throw new Error('Account not found.');
 
+      const date = Date.now().toString();
+      let isTrasfered = false;
+      const payFeeBy = payFee;
+      const type = {
+        name: 'receive',
+        bankCode: req.headers.bank_code,
+      };
       const balance = parseInt(account.checkingAccount.amount);
-      if (type === 'deposit' && amount > 0) {
+      if (amount > 0) {
         // cong tien
         const newAmount = balance + amount;
-        await customerModel.updateCheckingAmount(request_to.account_number, newAmount);
-      } else if (type === 'withdraw' && amount > 0) {
-        if (balance < amount) throw new Error("This account's balance is not enough to process.");
-        // tru tien
-        const newAmount = balance - amount;
-        await customerModel.updateCheckingAmount(request_to.account_number, newAmount);
+        await customerModel.updateCheckingAmount(receiver, newAmount);
+        isTrasfered = true;
       } else {
         throw new Error('There is error in your request body.');
       }
+
+      await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+      res.status(200).json({ message: 'Transfer money done' });
     } catch (err) {
-      res.status(401).json({ error: err.message });
+      res.status(401).json({ message: err.message, headers: req.headers });
     }
-    res.json({ message: 'Your message' });
   },
 };

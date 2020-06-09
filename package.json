@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/tuanpenspinnner/PTUDWNC2016_Nhom1#readme",
   "dependencies": {
+    "async": "^3.2.0",
     "axios": "^0.19.2",
     "bcryptjs": "^2.4.3",
     "dotenv": "^8.2.0",
@@ -33,7 +34,7 @@
     "nodemailer": "^6.4.8",
     "object-hash": "^2.0.3",
     "openpgp": "^4.10.4",
-    "rand-token": "^1.0.1",
+    "superagent": "^5.2.2",
     "speakeasy": "^2.0.0"
   },
   "devDependencies": {
