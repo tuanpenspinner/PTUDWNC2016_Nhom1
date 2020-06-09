@@ -11,4 +11,5 @@ router.post("/changePassword", customerController.changePasswordCustomer); //Api
 router.post("/ottGenerate", customerController.otpGenerate); //Api tạo mã OTP
 router.post("/otpValidate", customerController.otpValidate); //Api xác nhận mã OTP
 router.post("/sendOTP", customerController.sendOTP); //Gửi mã OTP tới địa chỉ nhận
+router.post("/refreshToken", customerController.refreshToken); //Gửi mã OTP tới địa chỉ nhận
 module.exports = router;

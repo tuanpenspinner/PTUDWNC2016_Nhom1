@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
 const speakeasy = require("speakeasy");
@@ -11,7 +11,7 @@ const checkingAccount0 = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const savingAccount = new Schema(
   {
@@ -20,7 +20,7 @@ const savingAccount = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const receiver = new Schema(
   {
@@ -29,7 +29,7 @@ const receiver = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const moneyRecharge = new Schema(
   {
@@ -39,7 +39,7 @@ const moneyRecharge = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const mailOtp = new Schema(
   {
@@ -48,12 +48,13 @@ const mailOtp = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const customerSchema = new Schema({
   name: { type: String, required: true },
   username: { type: String, required: true, trim: true },
   password: { type: String, required: true, minlength: 6 },
+  refreshToken: { type: String, default: null },
   phone: { type: String, required: true, trim: true },
   email: { type: String, required: true, trim: true },
   mailOtp: { type: mailOtp, default: null },
@@ -63,7 +64,7 @@ const customerSchema = new Schema({
   historyMoneyRecharge: { type: [moneyRecharge] }, //lịch sử nạp tiền
 });
 
-const Customer = mongoose.model('Customer', customerSchema, 'customers');
+const Customer = mongoose.model("Customer", customerSchema, "customers");
 
 module.exports = {
   // Đăng kí tài khoản customer
@@ -74,7 +75,7 @@ module.exports = {
       var user = new Customer(entity);
       await user.save();
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
     }
   },
 
@@ -84,7 +85,7 @@ module.exports = {
       let user = await Customer.findOne({ username: username });
       return user;
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
     }
   },
   // tìm 1 tài khoản customer theo checkingAccountNumber
@@ -96,7 +97,7 @@ module.exports = {
       });
       return user;
     } catch (e) {
-      console.log('ERROR: ' + e.message);
+      console.log("ERROR: " + e.message);
     }
   },
   // tìm 1 tài khoản customer theo savingAccountNumber
@@ -108,7 +109,7 @@ module.exports = {
       });
       return user;
     } catch (e) {
-      console.log('ERROR: ' + e.message);
+      console.log("ERROR: " + e.message);
     }
   },
   // Đăng nhập tài khoản customer
@@ -133,7 +134,7 @@ module.exports = {
         { username: entity.username },
         {
           password: hash,
-        },
+        }
       );
       return true;
     }
@@ -188,19 +189,37 @@ module.exports = {
     });
     return true;
   },
+  updateRefreshToken: async (username, refreshToken) => {
+    try {
+      await Customer.findOneAndUpdate(
+        { username: username },
+        { refreshToken: refreshToken }
+      );
+    } catch (e) {
+      console.log("ERROR: " + e);
+      return 0;
+    }
+  },
+  verifyRefreshToken: async (username, refreshToken) => {
+    const ret = await Customer.findOne({ username: username });
+    const compare = refreshToken === ret.refreshToken;
+    if (compare) return true;
+
+    return null;
+  },
 
   //lấy customer theo accountNumber checkingAccount
   getCustomerByAccount: async (_accountNumber) => {
     try {
       const customer = await Customer.findOne({
-        'checkingAccount.accountNumber': _accountNumber,
+        "checkingAccount.accountNumber": _accountNumber,
       });
       //      listAllCustomers instanceof mongoose.Query; // true
       //    const reslt= await listAllCustomers;
       // console.log(customer);
       return customer;
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
       return 0;
     }
   },
@@ -213,7 +232,7 @@ module.exports = {
       //    const reslt= await listAllCustomers;
       return listAllCustomers;
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
       return 0;
     }
   },
@@ -221,23 +240,23 @@ module.exports = {
   updateCheckingAmount: async (_accountNumber, _newAmount) => {
     try {
       const u = await Customer.update(
-        { 'checkingAccount.accountNumber': _accountNumber },
-        { 'checkingAccount.amount': _newAmount },
+        { "checkingAccount.accountNumber": _accountNumber },
+        { "checkingAccount.amount": _newAmount }
       );
       // console.log('uupdate', u);
     } catch (err) {
-      console.log('ERR', err.message);
+      console.log("ERR", err.message);
     }
   },
 
   updateSavingAmount: async (_username, _accountNumber, _newAmount) => {
     try {
       const u = await Customer.updateOne(
-        { 'savingsAccount.accountNumber': _accountNumber, username: _username },
-        { $set: { 'savingsAccount.$.amount': _newAmount } },
+        { "savingsAccount.accountNumber": _accountNumber, username: _username },
+        { $set: { "savingsAccount.$.amount": _newAmount } }
       );
     } catch (err) {
-      console.log('ERR', err.message);
+      console.log("ERR", err.message);
     }
   },
 
@@ -257,23 +276,27 @@ module.exports = {
         }
       );
     } catch (err) {
-      console.log('ERR', err.message);
+      console.log("ERR", err.message);
     }
   },
 
   // update mail OTP by account number
   updateMailOTP: async (accountNumber, otp) => {
     issueAt = Date.now();
-    await Customer.updateOne({ 'checkingAccount.accountNumber': accountNumber }, { mailOtp: { otp, issueAt } });
+    await Customer.updateOne(
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: { otp, issueAt } }
+    );
   },
 
   checkMailOTP: async (accountNumber, otp) => {
     const mailOtp = await Customer.updateOne(
-      { 'checkingAccount.accountNumber': accountNumber },
-      { mailOtp: { otp, issueAt } },
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: { otp, issueAt } }
     );
     console.log(mailOtp);
-    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp) return false;
+    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp)
+      return false;
     return true;
   },
 };
