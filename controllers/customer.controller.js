@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 
 //tìm info customer bằng accountNumber checkingAccount
 exports.getCustomer = async (req, res) => {
-  const _accountNumber = req.params.accountNumber;
+  const _accountNumber = req.payload.accountNumber;
   try {
     const customer = await Customer.getCustomer(_accountNumber);
 
@@ -85,6 +85,7 @@ exports.loginCustomer = async (req, res) => {
       idUser: ret._id,
       username: ret.username,
       name: ret.name,
+      accountNumber: ret.checkingAccount.accountNumber,
     };
 
     const accessToken = jwt.sign(payload, "secretKeyCustomer", {

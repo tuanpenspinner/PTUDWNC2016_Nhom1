@@ -33,6 +33,7 @@
     "nodemailer": "^6.4.8",
     "object-hash": "^2.0.3",
     "openpgp": "^4.10.4",
+    "rand-token": "^1.0.1",
     "speakeasy": "^2.0.0"
   },
   "devDependencies": {
