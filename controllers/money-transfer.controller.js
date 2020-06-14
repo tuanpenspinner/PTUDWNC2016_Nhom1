@@ -13,7 +13,7 @@ const PARTNERS = {
   PPNBank: {
     bank_code: 'PPNBank', // team Phong Le
     secret: 'phongledeptrai',
-    apiRoot: 'https://whispering-oasis-78594.herokuapp.com/api',
+    apiRoot: 'https://ppnbank.herokuapp.com/api',
   },
   CryptoBank: {
     bank_code: 'CryptoBank', // team Dang Thanh Tuan
@@ -49,7 +49,6 @@ function checkSecurity(req, isMoneyAPI = false) {
   if (isMoneyAPI) return;
   const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
   const hashString = hash.MD5(sigString);
-  console.log('hashStr', ts, hashString);
   if (sig !== hashString) throw new Error('Signature failed.');
 }
 
@@ -124,6 +123,7 @@ module.exports = {
   bankDetail: async (req, res) => {
     try {
       const { account_number } = req.body;
+      console.log(req.body);
       if (!account_number) throw new Error('account_number is missing in request body.');
 
       checkSecurity(req);
@@ -140,7 +140,7 @@ module.exports = {
   partnerBankDetail: (req, res) => {
     // api noi bo - get thong tin tai khoan ngan hang partners
     // body = { bank_code, account_number }
-    const { bank_code, account_number } = req.headers;
+    const { bank_code, account_number } = req.body;
     switch (bank_code) {
       case 'CryptoBank':
         {
@@ -177,7 +177,6 @@ module.exports = {
           const secret = PARTNERS.PPNBank.secret;
           const sig = hash.MD5(ts + JSON.stringify(body) + secret);
 
-          console.log(body, ts, partnerCode, secret, sig);
           const headers = {
             ts,
             partnerCode,
@@ -186,11 +185,11 @@ module.exports = {
           };
 
           superagent
-            .post(`${PARTNERS[bank_code].apiRoot}/accounts/partner`)
+            .get(`${PARTNERS[bank_code].apiRoot}/accounts/PPNBankDetail`)
             .send(body)
             .set(headers)
             .end((err, result) => {
-              const name = JSON.parse(result.res.text).name;
+              const name = JSON.parse(result.res.text || {}).name;
               res.status(200).json({ account_number, name });
             });
         }
@@ -283,7 +282,7 @@ module.exports = {
           };
 
           superagent
-            .post(`${PARTNERS[bank_code].apiRoot}/accounts/partner/transfer`)
+            .post(`${PARTNERS[bank_code].apiRoot}/accounts/receive`)
             .send(body)
             .set(headers)
             .end(async (err, result) => {
@@ -293,7 +292,6 @@ module.exports = {
               await customerModel.updateCheckingAmount(transferer, newAmount);
               isTrasfered = true;
               await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-              console.log(result);
               res.status(200).json({});
             });
         }
