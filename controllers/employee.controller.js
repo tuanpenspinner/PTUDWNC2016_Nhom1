@@ -28,13 +28,16 @@ const checkMoneyRecharge = async (username, accountNumber, amount, type) => {
   return {username, accountNumber, amount, type};
 };
 
-  //Đăng nhập customer
+  //Đăng nhập employee
   exports.loginEmployee = async (req, res) => {
     try {
       const entity = req.body;
       const ret = await Employee.loginEmployee(entity);
       if (ret === null)
-        throw { message: "Tài khoản hoặc mật khẩu chưa chính xác" };
+      return res.json({
+        status: 'fail',
+        failLogin: "Tài khoản hoặc mật khẩu chưa chính xác",
+      });
       const payload = {
         idUser: ret._id,
         username: ret.username,
@@ -44,12 +47,17 @@ const checkMoneyRecharge = async (username, accountNumber, amount, type) => {
       const accessToken = jwt.sign(payload, "secretKeyCustomer", {
         expiresIn: "1d", // 1 day
       });
-      res.json({ accessToken: accessToken });
+      const resUser={
+        username: ret.username,
+        email: ret.email,
+        name: ret.name,
+      };
+      res.json({ status: 'success',accessToken: accessToken,user: resUser });
     } catch (e) {
       console.log("ERROR: " + e.message);
   
       return res.json({
-        status: "failed",
+        status: "fail",
         code: 2022,
         message: "Đăng nhập thất bại",
       });

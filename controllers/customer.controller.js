@@ -82,6 +82,7 @@ exports.loginCustomer = async (req, res) => {
     const ret = await Customer.loginCustomer(entity);
     if (ret === null)
       return res.json({
+        status: 'fail',
         failLogin: 'Tài khoản hoặc mật khẩu chưa chính xác',
       });
     const payload = {
@@ -94,7 +95,12 @@ exports.loginCustomer = async (req, res) => {
     const refreshToken = randToken.generate(96); //Chiều dài của refreshToken;
     Customer.updateRefreshToken(ret.username, refreshToken);
     const accessToken = generateAccessToken(payload);
-    res.json({ accessToken: accessToken, refreshToken });
+    const resUser={
+      username: ret.username,
+      email: ret.email,
+      name: ret.name,
+    };
+    res.json({ status: 'success',accessToken: accessToken, refreshToken,user: resUser });
   } catch (e) {
     console.log('ERROR: ' + e);
 
