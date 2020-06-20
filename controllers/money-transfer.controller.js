@@ -20,6 +20,12 @@ const PARTNERS = {
     secret: 'CryptoBank_secret',
     apiRoot: 'https://crypto-bank-1612785.herokuapp.com/api',
   },
+  LocalBank: {
+    // test PGP local
+    bank_code: 'LocalBank',
+    secret: 'LocalBank_secret',
+    apiRoot: '',
+  },
 };
 const MY_BANK_SECRET = 'hiphopneverdie';
 const MY_BANK_CODE = 'TUB';
@@ -52,7 +58,7 @@ function checkSecurity(req, isMoneyAPI = false) {
   if (sig !== hashString) throw new Error('Signature failed.');
 }
 
-function verifySig(req) {
+async function verifySig(req) {
   try {
     checkSecurity(req, true);
     const { bank_code, sig, ts } = req.headers;
@@ -72,8 +78,34 @@ function verifySig(req) {
           }
         }
         break;
-      case 'PGP':
+      case 'LocalBank':
         {
+          const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
+          const hashString = hash.MD5(sigString); // return hex encoding string
+
+          const privateKeyArmored = pgpPrivateKeyString;
+          const publicKeyArmored = pgpPublicKeyString;
+          const passphrase = 'Hiphop_never_die';
+
+          const {
+            keys: [privateKey],
+          } = await openpgp.key.readArmored(privateKeyArmored);
+          await privateKey.decrypt(passphrase);
+          const { data: genSig } = await openpgp.sign({
+            message: openpgp.cleartext.fromText(hashString), // CleartextMessage or Message object
+            privateKeys: [privateKey], // for signing
+          });
+
+          // verifying PGP signed message
+          const verified = await openpgp.verify({
+            message: await openpgp.cleartext.readArmored(genSig), // parse armored message
+            publicKeys: (await openpgp.key.readArmored(publicKeyArmored)).keys, // for verification
+          });
+          console.log('verified', verified);
+          const { valid } = verified.signatures[0];
+          if (!valid) {
+            throw new Error('PGP signature could not be verified');
+          }
         }
         break;
       default:
@@ -82,21 +114,6 @@ function verifySig(req) {
     throw new Error(err.message);
   }
 }
-
-function moneyTransfer() {}
-
-// body = {
-//   type: 'deposit',
-//   amount: 50000,
-//   transferer: {
-//     account_number: '43154325341',
-//     full_name: 'Name A'
-//   },
-//   receiver: {
-//     account_number: '56154325345',
-//     full_name: 'Name B'
-//   }
-// }
 
 function getBankDetail(partner_code) {
   const data = {};
@@ -192,6 +209,11 @@ module.exports = {
               const name = JSON.parse(result.res.text || {}).name;
               res.status(200).json({ account_number, name });
             });
+        }
+        break;
+      case 'LocalBank':
+        {
+          console.log('localbank');
         }
         break;
       default:
@@ -296,6 +318,11 @@ module.exports = {
             });
         }
         break;
+      case 'LocalBank':
+        {
+          d;
+        }
+        break;
       default:
         console.log('ERR bank_code wrong');
     }
@@ -325,7 +352,7 @@ module.exports = {
         throw new Error('There is error in your request body.');
       }
 
-      await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+      // await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
       res.status(200).json({ message: 'Transfer money done' });
     } catch (err) {
       res.status(401).json({ message: err.message, headers: req.headers });
