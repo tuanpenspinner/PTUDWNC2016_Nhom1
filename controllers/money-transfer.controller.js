@@ -87,6 +87,7 @@ async function verifySig(req) {
           const publicKeyArmored = pgpPublicKeyString;
           const passphrase = 'Hiphop_never_die';
 
+          // signing
           const {
             keys: [privateKey],
           } = await openpgp.key.readArmored(privateKeyArmored);
@@ -206,8 +207,9 @@ module.exports = {
             .send(body)
             .set(headers)
             .end((err, result) => {
-              const name = JSON.parse(result.res.text || {}).name;
-              res.status(200).json({ account_number, name });
+              console.log(result.res);
+              const name = JSON.parse(result.res.text || {}).name || 'Không tìm thấy thông tin';
+              res.set({ 'Access-Control-Allow-Origin': '*' }).status(200).json({ account_number, name });
             });
         }
         break;
@@ -320,7 +322,6 @@ module.exports = {
         break;
       case 'LocalBank':
         {
-          d;
         }
         break;
       default:
