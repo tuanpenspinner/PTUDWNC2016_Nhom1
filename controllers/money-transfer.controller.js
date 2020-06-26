@@ -159,6 +159,7 @@ module.exports = {
     // api noi bo - get thong tin tai khoan ngan hang partners
     // body = { bank_code, account_number }
     const { bank_code, account_number } = req.body;
+    console.log('body', req.body);
     switch (bank_code) {
       case 'CryptoBank':
         {
@@ -207,9 +208,10 @@ module.exports = {
             .send(body)
             .set(headers)
             .end((err, result) => {
-              console.log(result.res);
               const name = JSON.parse(result.res.text || {}).name || 'Không tìm thấy thông tin';
-              res.set({ 'Access-Control-Allow-Origin': '*' }).status(200).json({ account_number, name });
+
+              console.log('name api', name);
+              res.status(200).json({ account_number, name });
             });
         }
         break;
