@@ -201,6 +201,7 @@ module.exports = {
             partnerCode,
             sig,
             'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': 'http://localhost.com:3000',
           };
 
           superagent
