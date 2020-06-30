@@ -44,7 +44,7 @@ const checkMoneyRecharge = async (username, accountNumber, amount, type) => {
         name: ret.name,
       };
   
-      const accessToken = jwt.sign(payload, "secretKeyCustomer", {
+      const accessToken = jwt.sign(payload, "secretKeyEmployee", {
         expiresIn: "1d", // 1 day
       });
       const resUser={
@@ -63,7 +63,40 @@ const checkMoneyRecharge = async (username, accountNumber, amount, type) => {
       });
     }
   };
-
+  //lay thong tin nhan vien
+  exports.getEmployeeInfo = async (req, res) => {
+    const usernameEmployee = req.payload.username;
+    try {
+      var result = await Employee.findByUsername(usernameEmployee);
+  
+      if (!result) {
+        throw "Tài khoản không tồn tại!";
+      }
+      console.log(result);
+      const employee = {
+        username: result.username,
+        name: result.name,
+        phone: result.phone,
+        email: result.email,
+      };
+      console.log(employee);
+  
+      return res.json({
+        status: "success",
+        code: 2020,
+        message: "Lấy thông tin nhân viên thành công!",
+        employee,
+      });
+    } catch (e) {
+      console.log("ERROR: " + e);
+  
+      return res.json({
+        status: "failed",
+        code: 2022,
+        message: "Lấy thông tin nhân viên thất bại!",
+      });
+    }
+  };
 // nạp tiền
 exports.rechargeMoney = async (req, res) => {
   try {
