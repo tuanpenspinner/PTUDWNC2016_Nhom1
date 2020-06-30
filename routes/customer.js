@@ -5,11 +5,12 @@ const authCustomer = require("../middleware/auth.customer");
 const customerController = require("../controllers/customer.controller");
 router.get("/list-customer", customerController.getAllCustomers);
 router.get("/:accountNumber", authCustomer, customerController.getCustomer);
+router.get("/info/profile", authCustomer, customerController.getCustomerInfo); //Lấy thông tin customer
 router.post("/register", customerController.registerCustomer); //Api đăng kí tài khoản customer
 router.post("/login", customerController.loginCustomer); //Api đăng nhập của customer
-router.post("/changePassword", customerController.changePasswordCustomer); //Api thay đổi mật khẩu
+router.post("/changePassword",authCustomer, customerController.changePasswordCustomer); //Api thay đổi mật khẩu
 router.post("/ottGenerate", customerController.otpGenerate); //Api tạo mã OTP
 router.post("/otpValidate", customerController.otpValidate); //Api xác nhận mã OTP
 router.post("/sendOTP", customerController.sendOTP); //Gửi mã OTP tới địa chỉ nhận
-router.post("/refreshToken", customerController.refreshToken); //Gửi mã OTP tới địa chỉ nhận
+router.post("/refreshToken", customerController.refreshToken); //Lấy lại token
 module.exports = router;
