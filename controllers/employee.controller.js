@@ -1,6 +1,7 @@
 const Employee = require("../models/employee.model");
 const Customer = require("../models/customer.model");
 const jwt = require("jsonwebtoken");
+const { updateEmployee } = require("../models/employee.model");
 
 //check data nạp tiền
 const checkMoneyRecharge = async (username, accountNumber, amount, type) => {
@@ -93,6 +94,44 @@ exports.loginEmployee = async (req, res) => {
     });
   }
 };
+//update thông tin cá nhân (tên/số điện thoại/email)
+exports.updateInfoProfile = async (req, res) => {
+  const username = req.payload.username;
+  const { name, phone, email} = req.body;
+  const reqData = {
+    username: username,
+    name: name,
+    email: email,
+    phone: phone,
+  };
+  try {
+    const updatedEmployee = await Employee.updateEmployee(reqData);
+    if (!updatedEmployee) {
+      throw "Cập nhật thất bại!";
+    } else {
+      const resultUpdate={
+        username: updatedEmployee.username,
+        name: updatedEmployee.name,
+        phone: updatedEmployee.phone,
+        email: updatedEmployee.email,
+      }
+      return res.json({
+        status: "success",
+        code: 2020,
+        message: "Cập nhật thông tin nhân viên thành công!",
+        updatedEmployee: resultUpdate,
+      });
+    }
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Cập nhật tin nhân viên thất bại!",
+    });
+  }
+};
 //lay thong tin nhan vien
 exports.getEmployeeInfo = async (req, res) => {
   const usernameEmployee = req.payload.username;
@@ -167,7 +206,6 @@ exports.rechargeMoney = async (req, res) => {
       status: "success",
       code: 2020,
       message: `Nạp tiền vào tài khoản ${accountNumber} thành công!`,
-
     });
   } catch (e) {
     console.log("ERROR: " + e.message);

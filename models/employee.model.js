@@ -2,17 +2,20 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
 
-const employeeSchema = new Schema({
-  name: {type: String, required: true},
-  username: {type: String, required: true},
-  password: {type: String, required: true},
-  phone: {type: String, required: true},
-  email: {type: String, required: true},
-},{
-  versionKey: false
-});
+const employeeSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    username: { type: String, required: true },
+    password: { type: String, required: true },
+    phone: { type: String, required: true },
+    email: { type: String, required: true },
+  },
+  {
+    versionKey: false,
+  }
+);
 
-const Employee =mongoose.model('Employee', employeeSchema, 'employees');
+const Employee = mongoose.model("Employee", employeeSchema, "employees");
 
 module.exports = {
   //tìm nhân viên theo email
