@@ -15,10 +15,10 @@ const employeeSchema = new Schema({
 const Employee =mongoose.model('Employee', employeeSchema, 'employees');
 
 module.exports = {
-//tìm nhân viên theo email
+  //tìm nhân viên theo email
   findByEmail: async (email) => {
     try {
-      const employee = await Employee.findOne({email: email});
+      const employee = await Employee.findOne({ email: email });
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -28,7 +28,7 @@ module.exports = {
   //tìm nhân viên theo username
   findByUsername: async (username) => {
     try {
-      const employee = await Employee.findOne({username: username});
+      const employee = await Employee.findOne({ username: username });
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -47,16 +47,16 @@ module.exports = {
       console.log("ERROR: " + e);
     }
   },
-// Đăng nhập tài khoản employee
-loginEmployee: async (entity) => {
-  const employeeExist = await Employee.findOne({ username: entity.username });
-  if (employeeExist === null) return null;
-  const password = employeeExist.password;
-  if (bcrypt.compareSync(entity.password, password)) {
-    return employeeExist;
-  }
-  return null;
-},
+  // Đăng nhập tài khoản employee
+  loginEmployee: async (entity) => {
+    const employeeExist = await Employee.findOne({ username: entity.username });
+    if (employeeExist === null) return null;
+    const password = employeeExist.password;
+    if (bcrypt.compareSync(entity.password, password)) {
+      return employeeExist;
+    }
+    return null;
+  },
   //thêm employee
   // createEmployee: async (data) => {
   //   try {
@@ -68,9 +68,9 @@ loginEmployee: async (entity) => {
   //   }
   // },
   //xóa employee
-  deleteEmployee: async (email) => {
+  deleteEmployee: async (username) => {
     try {
-      const employee = await Employee.deleteOne({email: email});
+      const employee = await Employee.deleteOne({ username: username });
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -80,24 +80,32 @@ loginEmployee: async (entity) => {
   //cập nhật employee
   updateEmployee: async (data) => {
     try {
-      const employee = await Employee.findOneAndUpdate({ username: data.username }, { name: data.name, password: data.password, phone: data.phone, email: data.email}, { runValidators: true });
-      return employee;
-  } catch (e) {
-      console.log("ERROR: "+ e);
-      throw e;
-  }
-  },
-  //truy vấn employee theo email
-  getEmployee: async (email) => {
-    try {
-      const employee = await Employee.findOne({email: email});
+      const employee = await Employee.findOneAndUpdate(
+        { username: data.username },
+        {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+        },
+        { runValidators: true }
+      );
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
       throw e;
     }
   },
-  //lấy danh sách employee 
+  //truy vấn employee theo email
+  getEmployee: async (email) => {
+    try {
+      const employee = await Employee.findOne({ email: email });
+      return employee;
+    } catch (e) {
+      console.log("ERROR: " + e);
+      throw e;
+    }
+  },
+  //lấy danh sách employee
   getListEmployees: async () => {
     try {
       const listEmployees = await Employee.find();
@@ -106,5 +114,5 @@ loginEmployee: async (entity) => {
       console.log("ERROR: " + e);
       throw e;
     }
-  }
+  },
 };
