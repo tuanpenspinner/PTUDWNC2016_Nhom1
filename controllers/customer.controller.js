@@ -166,7 +166,7 @@ exports.changePasswordCustomer = async (req, res) => {
     console.log("ERROR: " + e);
 
     return res.json({
-      status: "failed",
+      status: false,
       code: 2022,
       message: "Đổi mật khẩu thất bại",
     });
@@ -176,7 +176,7 @@ exports.changePasswordCustomer = async (req, res) => {
 exports.otpGenerate = async (req, res) => {
   try {
     const entity = req.body;
-    const ret = await Customer.otpGenerate(entity.username, entity.email);
+    const ret = await Customer.otpGenerate();
     if (ret === null) return res.json({ message: "Không trả về mã OTP" });
     else {
       return res.json({ OTP: ret });
@@ -185,40 +185,56 @@ exports.otpGenerate = async (req, res) => {
     console.log("ERROR: " + e);
 
     return res.json({
-      status: "failed",
+      status: false,
+      code: 2022,
+      message: "Reset khẩu thất bại",
+    });
+  }
+};
+exports.saveAndSendOTP = async (req, res) => {
+  try {
+    const entity = req.body;
+    const OTP = await Customer.otpGenerate();
+    const ret = await Customer.saveOTP(entity.username, OTP, entity.email);
+    if (ret) {
+      const send = await Customer.sendOTP(entity.email, OTP);
+      if (send === false)
+        return res.json({ status: false, message: "Gửi OTP thất bại" });
+      else {
+        return res.json({
+          status: true,
+          message: `Lưu OTP và gửi mà OTP tới địa chỉ ${entity.email}thành công`,
+        });
+      }
+    }
+    return res.json({ status: false, message: "Email không thuộc tài khoản" });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: false,
       code: 2022,
       message: "Reset khẩu thất bại",
     });
   }
 };
 //Xác nhận mã OTP
-exports.otpValidate = async (req, res) => {
+exports.otpValidateAndResetPassword = async (req, res) => {
   try {
     const entity = req.body;
-    const ret = await Customer.otpValidate(
+    const ret = await Customer.otpValidateAndResetPassword(
       entity.OTP,
-      entity.username,
-      entity.email
+      entity.username
     );
-    if (ret === null) return res.json({ message: "Không trả về mã OTP" });
+    console.log(ret);
+    if (ret === false)
+      return res.json({ status: false, message: "Mã OTP sai hoặc hết hạn" });
     else {
-      return res.json({ "Xác nhận OTP": ret });
+      const changePassword = await Customer.resetPassword(entity);
+      if (changePassword)
+        return res.json({ status: true, message: "Đổi mật khẩu thành công" });
+      else return res.json({ status: false, message: "Đổi mật khẩu thất bại" });
     }
-  } catch (e) {
-    console.log("ERROR: " + e);
-
-    return res.json({
-      status: "failed",
-      code: 2022,
-      message: "Reset khẩu thất bại",
-    });
-  }
-};
-exports.sendOTP = async (req, res) => {
-  try {
-    const entity = req.body;
-    await Customer.sendOTP(entity.OTP, entity.email);
-    res.json({ "Thông báo": `Đã gửi OTP tới địa chỉ ${entity.email}` });
   } catch (e) {
     console.log("ERROR: " + e);
 

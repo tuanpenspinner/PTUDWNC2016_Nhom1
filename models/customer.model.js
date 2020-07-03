@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
-const speakeasy = require("speakeasy");
 const nodemailer = require("nodemailer");
 
 const checkingAccount0 = new Schema(
@@ -140,31 +139,38 @@ module.exports = {
     }
     return null;
   },
+  resetPassword: async (entity) => {
+    const customerExist = await Customer.findOne({ username: entity.username });
+    if (customerExist === null) return null;
+    else {
+      const hash = bcrypt.hashSync(entity.newPassword, 10);
+      await Customer.findOneAndUpdate(
+        { username: entity.username },
+        {
+          password: hash,
+        }
+      );
+      return true;
+    }
+  },
   //Tạo mã OTP
-  otpGenerate: async (username, email) => {
-    const secret = "secretOTP" + username + email;
-
-    const OTP = speakeasy.totp({
-      secret: secret,
-      encoding: "base32",
-    });
-
+  otpGenerate: async () => {
+    const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
     return OTP;
   },
-  //Xác nhận mã OTP
-  otpValidate: async (OTP, username, email) => {
-    const secret = "secretOTP" + username + email;
-
-    var tokenValidates = speakeasy.totp.verify({
-      secret: secret,
-      encoding: "base32",
-      token: OTP,
-    });
-
-    return tokenValidates;
+  saveOTP: async (username, otp,email) => {
+    issueAt = Date.now();
+    const customer = await Customer.findOne({ username: username })
+    if(email!==customer.email) return false
+    const ret = await Customer.updateOne(
+      { username: username },
+      { mailOtp: { otp, issueAt } }
+    );
+    return true;
   },
+
   //Gửi mã OTP đễn email customer
-  sendOTP: async (OTP, email) => {
+  sendOTP: async (email, OTP) => {
     var transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -178,7 +184,7 @@ module.exports = {
       to: email,
       subject: "Forget password",
       text: "OTP Code",
-      html: `<b>Mã OTP để reset password của bạn là: ${OTP}</b>`,
+      html: `<p>Mã OTP để reset password của bạn là: <b> ${OTP} </b></p><br> <p>Mã có thời hạn trong vòng 3 phút</p>`,
     };
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) {
@@ -187,6 +193,18 @@ module.exports = {
         console.log("Email sent: " + info.response);
       }
     });
+    return true;
+  },
+  //Xác nhận mã OTP
+  otpValidateAndResetPassword: async (OTP, username) => {
+    const ret = await Customer.findOne({
+      username: username,
+    });
+    if (
+      Date.now() - ret.mailOtp.issueAt > 1000 * 60 * 3 ||
+      ret.mailOtp.otp !== OTP
+    )
+      return false;
     return true;
   },
   updateRefreshToken: async (username, refreshToken) => {
