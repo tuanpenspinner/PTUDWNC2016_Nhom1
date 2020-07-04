@@ -7,6 +7,8 @@ router.get("/list-customer", customerController.getAllCustomers);
 router.get("/:accountNumber", authCustomer, customerController.getCustomer);
 router.get("/info/profile", authCustomer, customerController.getCustomerInfo); //Lấy thông tin customer
 router.post("/register", customerController.registerCustomer); //Api đăng kí tài khoản customer
+router.post("/updateNameCustomer", customerController.updateNameCustomer); //Api đổi tên customer
+
 router.post("/login", customerController.loginCustomer); //Api đăng nhập của customer
 router.post(
   "/changePassword",

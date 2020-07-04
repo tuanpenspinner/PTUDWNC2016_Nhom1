@@ -89,6 +89,27 @@ exports.getAllCustomers = async (req, res) => {
     });
   }
 };
+exports.updateNameCustomer = async (req, res) => {
+  try {
+    const { username, name } = req.body;
+    const ret = await Customer.updateNameCustomer(username, name);
+    if (ret)
+      return res.json({
+        status: true,
+        code: 2020,
+        message: "Đổi tên khách hàng thành công!",
+       
+      });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: false,
+      code: 2022,
+      message: "Đổi tên thất bại!",
+    });
+  }
+};
 
 //Đăng kí customer
 exports.registerCustomer = async (req, res) => {

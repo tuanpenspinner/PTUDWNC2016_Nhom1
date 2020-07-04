@@ -123,6 +123,7 @@ module.exports = {
   },
   // Đổi mật khẩu tài khoản customer
   changePasswordCustomer: async (entity) => {
+    console.log(entity)
     const customerExist = await Customer.findOne({ username: entity.username });
     if (customerExist === null) return null;
     const password = customerExist.password;
@@ -153,15 +154,23 @@ module.exports = {
       return true;
     }
   },
+
+  updateNameCustomer: async (username,name) => {
+    const customerExist = await Customer.findOneAndUpdate({ username: username },{name});
+    if (customerExist === null) return null;
+    else {
+      return true;
+    }
+  },
   //Tạo mã OTP
   otpGenerate: async () => {
     const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
     return OTP;
   },
-  saveOTP: async (username, otp,email) => {
+  saveOTP: async (username, otp, email) => {
     issueAt = Date.now();
-    const customer = await Customer.findOne({ username: username })
-    if(email!==customer.email) return false
+    const customer = await Customer.findOne({ username: username });
+    if (email !== customer.email) return false;
     const ret = await Customer.updateOne(
       { username: username },
       { mailOtp: { otp, issueAt } }
