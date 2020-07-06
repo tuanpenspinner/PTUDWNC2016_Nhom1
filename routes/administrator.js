@@ -7,4 +7,7 @@ router.get("/get-employee", administratorController.getEmployee);
 router.post("/register-employee", administratorController.registerEmployee);
 router.post("/delete-employee", administratorController.deleteEmployee);
 router.post("/update-employee", administratorController.updateEmployee);
+router.post("/register", administratorController.registerAdmin);
+router.post("/login", administratorController.loginAdmin);
+router.post("/refresh-token", administratorController.refreshToken);
 module.exports = router;

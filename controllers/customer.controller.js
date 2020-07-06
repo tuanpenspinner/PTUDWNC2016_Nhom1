@@ -98,7 +98,6 @@ exports.updateNameCustomer = async (req, res) => {
         status: true,
         code: 2020,
         message: "Đổi tên khách hàng thành công!",
-       
       });
   } catch (e) {
     console.log("ERROR: " + e);
@@ -179,9 +178,13 @@ exports.changePasswordCustomer = async (req, res) => {
   try {
     const entity = req.body;
     const ret = await Customer.changePasswordCustomer(entity);
-    if (ret === null) return res.json({ message: "Đổi mật khẩu thất bại!" });
+    if (ret === null)
+      return res.json({
+        status: false,
+        message: "Đổi mật khẩu thất bại!",
+      });
     else {
-      return res.json({ message: "Đổi mật khẩu thành công" });
+      return res.json({ status: true, message: "Đổi mật khẩu thành công" });
     }
   } catch (e) {
     console.log("ERROR: " + e);
@@ -306,7 +309,7 @@ exports.refreshToken = async (req, res) => {
 };
 const generateAccessToken = (payload) => {
   const accessToken = jwt.sign(payload, "secretKeyCustomer", {
-    expiresIn: "2d", // 1 day
+    expiresIn: "1d", // 1 day
   });
 
   return accessToken;

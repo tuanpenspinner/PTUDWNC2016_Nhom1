@@ -1,6 +1,7 @@
 const Employee = require("../models/employee.model");
 const Customer = require("../models/customer.model");
 const jwt = require("jsonwebtoken");
+const randToken = require("rand-token");
 const { updateEmployee } = require("../models/employee.model");
 
 //check data nạp tiền
@@ -74,16 +75,20 @@ exports.loginEmployee = async (req, res) => {
       username: ret.username,
       name: ret.name,
     };
-
-    const accessToken = jwt.sign(payload, "secretKeyEmployee", {
-      expiresIn: "1d", // 1 day
-    });
+    const refreshToken = randToken.generate(96); //Chiều dài của refreshToken;
+    Employee.updateRefreshToken(ret.username, refreshToken);
+    const accessToken = generateAccessToken(payload);
     const resUser = {
       username: ret.username,
       email: ret.email,
       name: ret.name,
     };
-    res.json({ status: "success", accessToken: accessToken, user: resUser });
+    res.json({
+      status: "success",
+      accessToken: accessToken,
+      user: resUser,
+      refreshToken,
+    });
   } catch (e) {
     console.log("ERROR: " + e.message);
 
@@ -94,10 +99,53 @@ exports.loginEmployee = async (req, res) => {
     });
   }
 };
+exports.refreshToken = async (req, res) => {
+  try {
+    jwt.verify(
+      req.body.accessToken,
+      "secretKeyEmployee",
+      { ignoreExpiration: true },
+      async function (err, payload) {
+        const { username, name, email } = payload;
+        const ret = await Customer.verifyRefreshToken(
+          username,
+          req.body.refreshToken
+        );
+        if (ret === null) {
+          res.json({ "Thông báo:": "không thể lấy token" });
+        } else {
+          const entity = {
+            username,
+            name,
+            email,
+          };
+          const accessToken = generateAccessToken(entity);
+
+          res.json({ accessToken });
+        }
+      }
+    );
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "refreshToken thất bại",
+    });
+  }
+};
+const generateAccessToken = (payload) => {
+  const accessToken = jwt.sign(payload, "secretKeyEmployee", {
+    expiresIn: "1d", // 1 day
+  });
+
+  return accessToken;
+};
 //update thông tin cá nhân (tên/số điện thoại/email)
 exports.updateInfoProfile = async (req, res) => {
   const username = req.payload.username;
-  const { name, phone, email} = req.body;
+  const { name, phone, email } = req.body;
   const reqData = {
     username: username,
     name: name,
@@ -109,12 +157,12 @@ exports.updateInfoProfile = async (req, res) => {
     if (!updatedEmployee) {
       throw "Cập nhật thất bại!";
     } else {
-      const resultUpdate={
+      const resultUpdate = {
         username: updatedEmployee.username,
         name: updatedEmployee.name,
         phone: updatedEmployee.phone,
         email: updatedEmployee.email,
-      }
+      };
       return res.json({
         status: "success",
         code: 2020,

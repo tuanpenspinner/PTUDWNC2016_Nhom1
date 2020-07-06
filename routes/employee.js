@@ -6,6 +6,7 @@ router.post("/money-recharge",authEmployee, employeeController.rechargeMoney);
 router.post("/login", employeeController.loginEmployee); //Api đăng nhập của employee
 router.post("/updateInfoPersonal",authEmployee, employeeController.updateInfoProfile); //Update thông tin employee
 router.get("/info/profile", authEmployee, employeeController.getEmployeeInfo); //Lấy thông tin employee
-router.get("/account-customers",authEmployee,employeeController.getAllAccountCustomers);
+router.get("/account-customers", authEmployee, employeeController.getAllAccountCustomers);
+router.post("/refreshToken", employeeController.refreshToken); //Lấy lại token
 //router.get("/info-customer",employeeController.getInfoCustomer);
 module.exports = router;

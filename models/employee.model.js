@@ -9,6 +9,7 @@ const employeeSchema = new Schema(
     password: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String, required: true },
+    refreshToken: { type: String, default: null },
   },
   {
     versionKey: false,
@@ -117,5 +118,23 @@ module.exports = {
       console.log("ERROR: " + e);
       throw e;
     }
+  },
+  updateRefreshToken: async (username, refreshToken) => {
+    try {
+      await Customer.findOneAndUpdate(
+        { username: username },
+        { refreshToken: refreshToken }
+      );
+    } catch (e) {
+      console.log("ERROR: " + e);
+      return 0;
+    }
+  },
+  verifyRefreshToken: async (username, refreshToken) => {
+    const ret = await Customer.findOne({ username: username });
+    const compare = refreshToken === ret.refreshToken;
+    if (compare) return true;
+
+    return null;
   },
 };

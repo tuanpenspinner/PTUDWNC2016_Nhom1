@@ -1,6 +1,8 @@
 const Employee = require("../models/employee.model");
 const Customer = require("../models/customer.model");
+const Admin = require("../models/admin.model");
 const jwt = require("jsonwebtoken");
+const randToken = require("rand-token");
 //Đăng kí Employee
 exports.registerEmployee = async (req, res) => {
   try {
@@ -152,4 +154,108 @@ exports.getAllEmployees = async (req, res) => {
       message: "Lấy danh sách nhân viên thất bại!",
     });
   }
+};
+//Đăng kí Admin
+exports.registerAdmin = async (req, res) => {
+  try {
+    const newCustomer = req.body;
+    const customerExist = await Admin.findOneUserName(newCustomer.username);
+    if (!customerExist) {
+      const result = await Admin.registerAdmin(newCustomer);
+      res.json(`Thêm tài khoản ${newCustomer.username} thành công`);
+    } else {
+      res.json(`Tài khoản ${newCustomer.username} đã tồn tại`);
+    }
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Tạo tài khoản thất bại",
+    });
+  }
+};
+//Đăng nhập customer
+exports.loginAdmin = async (req, res) => {
+  try {
+    const entity = req.body;
+    const ret = await Admin.loginAdmin(entity);
+    if (ret === null)
+      return res.json({
+        status: "fail",
+        failLogin: "Tài khoản hoặc mật khẩu chưa chính xác",
+      });
+    const payload = {
+      idUser: ret._id,
+      username: ret.username,
+      name: ret.name,
+    };
+
+    const refreshToken = randToken.generate(96); //Chiều dài của refreshToken;
+    Admin.updateRefreshToken(ret.username, refreshToken);
+    const accessToken = generateAccessToken(payload);
+    const admin = {
+      username: ret.username,
+      email: ret.email,
+      name: ret.name,
+    };
+    res.json({
+      status: "success",
+      accessToken: accessToken,
+      refreshToken,
+      admin,
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Đăng nhập thất bại",
+    });
+  }
+};
+exports.refreshToken = async (req, res) => {
+  try {
+    jwt.verify(
+      req.body.accessToken,
+      "secretKeyAdmin",
+      { ignoreExpiration: true },
+      async function (err, payload) {
+        const { username, name, email } = payload;
+        const ret = await Admin.verifyRefreshToken(
+          username,
+          req.body.refreshToken
+        );
+        if (ret === null) {
+          res.json({ "Thông báo:": "không thể lấy token" });
+        } else {
+          const entity = {
+            username,
+            name,
+            email,
+          };
+          const accessToken = generateAccessToken(entity);
+
+          res.json({ accessToken });
+        }
+      }
+    );
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "refreshToken thất bại",
+    });
+  }
+};
+const generateAccessToken = (payload) => {
+  const accessToken = jwt.sign(payload, "secretKeyAdmin", {
+    expiresIn: "1d", // 1 day
+  });
+
+  return accessToken;
 };
