@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
+const { closeSync } = require("fs");
 
 const checkingAccount0 = new Schema(
   {
@@ -123,7 +124,7 @@ module.exports = {
   },
   // Đổi mật khẩu tài khoản customer
   changePasswordCustomer: async (entity) => {
-    console.log(entity)
+    console.log(entity);
     const customerExist = await Customer.findOne({ username: entity.username });
     if (customerExist === null) return null;
     const password = customerExist.password;
@@ -155,13 +156,29 @@ module.exports = {
     }
   },
 
-  updateNameCustomer: async (username,name) => {
-    const customerExist = await Customer.findOneAndUpdate({ username: username },{name});
+  updateNameCustomer: async (username, name) => {
+    const customerExist = await Customer.findOneAndUpdate(
+      { username: username },
+      { name }
+    );
     if (customerExist === null) return null;
     else {
       return true;
     }
   },
+
+  updateListReceivers: async (username, listReceivers) => {
+    console.log(listReceivers);
+    const customerExist = await Customer.findOneAndUpdate(
+      { username: username },
+      { listReceivers }
+    );
+    if (customerExist === null) return null;
+    else {
+      return true;
+    }
+  },
+
   //Tạo mã OTP
   otpGenerate: async () => {
     const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
@@ -319,6 +336,17 @@ module.exports = {
     );
   },
 
+  checkMailOTP: async (accountNumber, otp) => {
+    const mailOtp = await Customer.updateOne(
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: { otp, issueAt } }
+    );
+    console.log(mailOtp);
+    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp)
+      return false;
+    return true;
+  },
+  //Lấy danh sách người nhận
   checkMailOTP: async (accountNumber, otp) => {
     const mailOtp = await Customer.updateOne(
       { "checkingAccount.accountNumber": accountNumber },

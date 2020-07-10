@@ -4,7 +4,7 @@ const randToken = require("rand-token");
 
 //tìm info customer bằng accountNumber checkingAccount
 exports.getCustomer = async (req, res) => {
-  const _accountNumber = req.payload.accountNumber;
+  const _accountNumber = req.params.accountNumber
   try {
     const customer = await Customer.getCustomerByAccount(_accountNumber);
 
@@ -28,7 +28,7 @@ exports.getCustomer = async (req, res) => {
     });
   }
 };
-//Lấy thông tin customer
+//Lấy thông tin customer them username
 exports.getCustomerInfo = async (req, res) => {
   const usernameCustomer = req.payload.username;
   try {
@@ -45,6 +45,8 @@ exports.getCustomerInfo = async (req, res) => {
       savingsAccount: result.savingsAccount,
       checkingAccount: result.checkingAccount,
       email: result.email,
+      listReceivers: result.listReceivers,
+     
     };
     console.log(customer);
 
@@ -59,6 +61,42 @@ exports.getCustomerInfo = async (req, res) => {
 
     return res.json({
       status: "failed",
+      code: 2022,
+      message: "Lấy thông tin khách hàng thất bại!",
+    });
+  }
+};
+//Lấy thông tin customer theo checking account number
+exports.getNameCustomer= async (req, res) => {
+  const accountNumber = req.params.accountNumber;
+  try {
+    var result = await Customer.getCustomerByAccount(accountNumber);
+
+    if (!result) {
+      return res.json({
+        status: false,
+        code: 2020,
+        message: "Tài khoản không tồn tại!",
+       
+      });
+    }
+    console.log(result);
+    const customer = {
+      name: result.name,
+    };
+    console.log(customer);
+
+    return res.json({
+      status: true,
+      code: 2020,
+      message: "Lấy thông tin khách hàng thành công!",
+      customer,
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: false,
       code: 2022,
       message: "Lấy thông tin khách hàng thất bại!",
     });
@@ -106,6 +144,29 @@ exports.updateNameCustomer = async (req, res) => {
       status: false,
       code: 2022,
       message: "Đổi tên thất bại!",
+    });
+  }
+};
+exports.updateListReceivers = async (req, res) => {
+  try {
+    const { listReceivers } = req.body;
+    console.log(listReceivers);
+    const { username } = req.payload;
+    
+    const ret = await Customer.updateListReceivers(username, listReceivers);
+    if (ret)
+      return res.json({
+        status: true,
+        code: 2020,
+        message: "Cập nhật danh sách người gửi thành công!",
+      });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: false,
+      code: 2022,
+      message: "Cập nhật danh sách người gửi thất bại!",
     });
   }
 };
