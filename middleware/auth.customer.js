@@ -5,6 +5,7 @@ authCustomer = (req, res, next) => {
   if (token) {
     jwt.verify(token, "secretKeyCustomer", (err, payload) => {
       if (err) res.status(401).send("Không được phép truy cập");
+    
       req.payload = payload;
       next();
     });

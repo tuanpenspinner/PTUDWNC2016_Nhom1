@@ -4,7 +4,7 @@ const randToken = require("rand-token");
 
 //tìm info customer bằng accountNumber checkingAccount
 exports.getCustomer = async (req, res) => {
-  const _accountNumber = req.params.accountNumber
+  const _accountNumber = req.params.accountNumber;
   try {
     const customer = await Customer.getCustomerByAccount(_accountNumber);
 
@@ -37,7 +37,6 @@ exports.getCustomerInfo = async (req, res) => {
     if (!result) {
       throw "Tài khoản không tồn tại!";
     }
-    console.log(result);
     const customer = {
       username: result.username,
       name: result.name,
@@ -46,12 +45,11 @@ exports.getCustomerInfo = async (req, res) => {
       checkingAccount: result.checkingAccount,
       email: result.email,
       listReceivers: result.listReceivers,
-     
     };
     console.log(customer);
 
     return res.json({
-      status: "success",
+      status: true,
       code: 2020,
       message: "Lấy thông tin khách hàng thành công!",
       customer,
@@ -60,14 +58,14 @@ exports.getCustomerInfo = async (req, res) => {
     console.log("ERROR: " + e);
 
     return res.json({
-      status: "failed",
+      status: false,
       code: 2022,
       message: "Lấy thông tin khách hàng thất bại!",
     });
   }
 };
 //Lấy thông tin customer theo checking account number
-exports.getNameCustomer= async (req, res) => {
+exports.getNameCustomer = async (req, res) => {
   const accountNumber = req.params.accountNumber;
   try {
     var result = await Customer.getCustomerByAccount(accountNumber);
@@ -77,7 +75,6 @@ exports.getNameCustomer= async (req, res) => {
         status: false,
         code: 2020,
         message: "Tài khoản không tồn tại!",
-       
       });
     }
     console.log(result);
@@ -152,7 +149,7 @@ exports.updateListReceivers = async (req, res) => {
     const { listReceivers } = req.body;
     console.log(listReceivers);
     const { username } = req.payload;
-    
+
     const ret = await Customer.updateListReceivers(username, listReceivers);
     if (ret)
       return res.json({
@@ -178,9 +175,15 @@ exports.registerCustomer = async (req, res) => {
     const customerExist = await Customer.findOneUserName(newCustomer.username);
     if (!customerExist) {
       const result = await Customer.registerCustomer(newCustomer);
-      res.json(`Thêm tài khoản ${newCustomer.username} thành công`);
+      res.json({
+        status: true,
+        message: `Thêm tài khoản ${newCustomer.username} thành công`,
+      });
     } else {
-      res.json(`Tài khoản ${newCustomer.username} đã tồn tại`);
+      res.json({
+        status: false,
+        message: `Tài khoản ${newCustomer.username} đã tồn tại`,
+      });
     }
   } catch (e) {
     console.log("ERROR: " + e);

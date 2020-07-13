@@ -273,7 +273,7 @@ module.exports = {
     try {
       const listAllCustomers = await Customer.find(
         {},
-        "username name phone email checkingAccount.accountNumber savingsAccount.accountNumber"
+        "username name phone email checkingAccount savingsAccount"
       );
       //      listAllCustomers instanceof mongoose.Query; // true
       //    const reslt= await listAllCustomers;
