@@ -1,5 +1,7 @@
 const Employee = require("../models/employee.model");
 const Customer = require("../models/customer.model");
+const Deal = require("../models/deal.model");
+const DebtReminder = require("../models/debt-reminder.model");
 const jwt = require("jsonwebtoken");
 const randToken = require("rand-token");
 const { updateEmployee } = require("../models/employee.model");
@@ -15,7 +17,6 @@ const checkMoneyRecharge = async (username, accountNumber, amount, type) => {
   }
   if (type === "checking") {
     const checkAccountNumber = await Customer.findOneCheckingAccount(
-      username,
       accountNumber
     );
     if (!checkAccountNumber) {
@@ -262,6 +263,45 @@ exports.rechargeMoney = async (req, res) => {
       status: "failed",
       code: 2022,
       message: e.message + " Vui lòng thực hiện lại.",
+    });
+  }
+};
+//lấy lịch sử giao dịch của customer
+exports.getHistoryDealOfCustomer = async (req, res) => {
+  console.log(req.params);
+  const { username } = req.params;
+  try {
+    var customer = await Customer.findOneUserName(username);
+
+    if (!customer) {
+      return res.json({
+        status: "failed",
+        code: 2022,
+        message: "Tài khoản không tồn tại!",
+      });
+    }
+    var historyTransfer = await Deal.getHistoryTransfer(
+      customer.checkingAccount.accountNumber
+    );
+    var historyReceive = await Deal.getHistoryReceive(
+      customer.checkingAccount.accountNumber
+    );
+    var historyPayDebt = await DebtReminder.getHistoryPayDebt(
+      customer.checkingAccount.accountNumber
+    );
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Truy vấn lịch sử giao dịch thành công thành công!",
+      history: { historyTransfer, historyReceive, historyPayDebt },
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Truy vấn lịch sử giao dịch thất bại!",
     });
   }
 };

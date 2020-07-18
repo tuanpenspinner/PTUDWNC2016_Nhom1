@@ -55,4 +55,19 @@ module.exports = {
     const date = new Date().toString();
     await debtReminder.updateOne({ _id: id }, { pay: { isPaid: true, timePay: date } });
   },
+   //lấy lịch sử thanh toán nợ
+   getHistoryPayDebt: async (accountNumber) => {
+    try {
+      const resultHistoryPayDebt = await debtReminder.find({
+        $or: [
+          { creator: accountNumber, "pay.isPaid": true },
+          { debtor: accountNumber, "pay.isPaid": true },
+        ],
+      });
+      return resultHistoryPayDebt;
+      // console.log('uupdate', u);
+    } catch (err) {
+      console.log("ERR", err.message);
+    }
+  },
 };

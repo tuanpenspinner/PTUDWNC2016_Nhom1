@@ -89,10 +89,9 @@ module.exports = {
     }
   },
   // tìm 1 tài khoản customer theo checkingAccountNumber
-  findOneCheckingAccount: async (username, accountNumber) => {
+  findOneCheckingAccount: async ( accountNumber) => {
     try {
       let user = await Customer.findOne({
-        username: username,
         "checkingAccount.accountNumber": accountNumber,
       });
       return user;
