@@ -12,13 +12,13 @@ router.get('/', (req, res) => {
 
 // public apis
 router.post('/money-transfer', moneyTransferController.postMoneyTransfer);
-router.get('/bank-detail', moneyTransferController.bankDetail);
+router.post('/bank-detail', authCustomer, moneyTransferController.bankDetail);
 
 // internal apis
 router.get('/money-transfer', moneyTransferController.moneyTransfer);
-router.get('/partner-bank-detail', moneyTransferController.partnerBankDetail);
+router.post('/partner-bank-detail', moneyTransferController.partnerBankDetail);
 //router.get('/debt-reminders');
-router.get('/debt-reminders/',authCustomer , debtReminderController.getListRemindersByAccount);
+router.get('/debt-reminders/', authCustomer, debtReminderController.getListRemindersByAccount);
 router.post('/debt-reminders', debtReminderController.createReminder);
 router.put('/debt-reminders/complete/:id', debtReminderController.completeReminder);
 router.put('/debt-reminders/cancel/:id', debtReminderController.cancelReminder);

@@ -4,7 +4,7 @@ const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
 const logger = require('morgan');
-var bodyParser = require("body-parser");
+var bodyParser = require('body-parser');
 const connectDB = require('./dbs');
 var cors = require('cors');
 
@@ -20,15 +20,15 @@ const PORT = 3001;
 //connect mongodb atlas
 connectDB();
 
-var allowCrossDomain = function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET/PUT/POST/DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  next();
-};
+// var allowCrossDomain = function (req, res, next) {
+//   res.header('Access-Control-Allow-Origin', '*');
+//   res.header('Access-Control-Allow-Methods', 'GET/PUT/POST/DELETE');
+//   res.header('Access-Control-Allow-Headers', 'Content-Type');
+//   next();
+// };
 
 app.use(cors());
-app.use(allowCrossDomain);
+// app.use(allowCrossDomain);
 
 // bodyparser middleware
 app.use(bodyParser.json());

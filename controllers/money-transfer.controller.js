@@ -116,26 +116,26 @@ async function verifySig(req) {
   }
 }
 
-function getBankDetail(partner_code) {
-  const data = {};
-  const ts = Date.now().toString();
-  const sigString = MY_BANK_CODE + ts + JSON.stringify(data) + partners[partner_code].secret;
-  const sig = hash.MD5(sigString);
-  const headers = {
-    bank_code,
-    ts,
-    sig,
-  };
+// function getBankDetail(partner_code) {
+//   const data = {};
+//   const ts = Date.now().toString();
+//   const sigString = MY_BANK_CODE + ts + JSON.stringify(data) + partners[partner_code].secret;
+//   const sig = hash.MD5(sigString);
+//   const headers = {
+//     bank_code,
+//     ts,
+//     sig,
+//   };
 
-  const instance = axios.create({
-    baseURL: 'http://localhost:3001/',
-    timeout: 3000,
-    headers,
-  });
-  instance.post('/', data).then((res) => {
-    console.log(res);
-  });
-}
+//   const instance = axios.create({
+//     baseURL: 'http://localhost:3001/',
+//     timeout: 3000,
+//     headers,
+//   });
+//   instance.post('/', data).then((res) => {
+//     console.log(res);
+//   });
+// }
 
 module.exports = {
   bankDetail: async (req, res) => {
@@ -144,7 +144,7 @@ module.exports = {
       console.log(req.body);
       if (!account_number) throw new Error('account_number is missing in request body.');
 
-      checkSecurity(req);
+      // checkSecurity(req);
       const account = await customerModel.getCustomerByAccount(account_number);
       if (!account) throw new Error('Account not found.');
       res.json({
@@ -200,15 +200,18 @@ module.exports = {
             ts,
             partnerCode,
             sig,
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': 'http://localhost.com:3000',
           };
 
           superagent
-            .get(`${PARTNERS[bank_code].apiRoot}/accounts/PPNBankDetail`)
+            .post(`${PARTNERS[bank_code].apiRoot}/accounts/PPNBankDetail`)
             .send(body)
             .set(headers)
             .end((err, result) => {
+              // if (err) res.status(201).json({ message: 'Đã xảy ra lỗi khi tìm thông tin ngân hàng đối tác' });
+              if (err) {
+                console.log(err);
+                res.status(404).json({ message: "Khong tim thay thong tin" });
+              }
               const name = JSON.parse(result.res.text || {}).name || 'Không tìm thấy thông tin';
 
               console.log('name api', name);
