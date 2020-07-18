@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-const bcrypt = require('bcryptjs');
-const speakeasy = require('speakeasy');
-const nodemailer = require('nodemailer');
+const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
+const { closeSync } = require("fs");
 
 const checkingAccount0 = new Schema(
   {
@@ -11,7 +11,7 @@ const checkingAccount0 = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const savingAccount = new Schema(
   {
@@ -20,7 +20,7 @@ const savingAccount = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const receiver = new Schema(
   {
@@ -29,7 +29,7 @@ const receiver = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const moneyRecharge = new Schema(
   {
@@ -39,7 +39,7 @@ const moneyRecharge = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const mailOtp = new Schema(
   {
@@ -48,7 +48,7 @@ const mailOtp = new Schema(
   },
   {
     _id: false,
-  },
+  }
 );
 const customerSchema = new Schema({
   name: { type: String, required: true },
@@ -64,7 +64,7 @@ const customerSchema = new Schema({
   historyMoneyRecharge: { type: [moneyRecharge] }, //lịch sử nạp tiền
 });
 
-const Customer = mongoose.model('Customer', customerSchema, 'customers');
+const Customer = mongoose.model("Customer", customerSchema, "customers");
 
 module.exports = {
   // Đăng kí tài khoản customer
@@ -75,7 +75,7 @@ module.exports = {
       var user = new Customer(entity);
       await user.save();
     } catch (e) {
-      console.log('ERROR: ' + e.message);
+      console.log("ERROR: " + e.message);
     }
   },
 
@@ -85,7 +85,7 @@ module.exports = {
       let user = await Customer.findOne({ username: username });
       return user;
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
     }
   },
   // tìm 1 tài khoản customer theo checkingAccountNumber
@@ -93,11 +93,11 @@ module.exports = {
     try {
       let user = await Customer.findOne({
         username: username,
-        'checkingAccount.accountNumber': accountNumber,
+        "checkingAccount.accountNumber": accountNumber,
       });
       return user;
     } catch (e) {
-      console.log('ERROR: ' + e.message);
+      console.log("ERROR: " + e.message);
     }
   },
   // tìm 1 tài khoản customer theo savingAccountNumber
@@ -105,11 +105,11 @@ module.exports = {
     try {
       let user = await Customer.findOne({
         username: username,
-        'savingsAccount.accountNumber': accountNumber,
+        "savingsAccount.accountNumber": accountNumber,
       });
       return user;
     } catch (e) {
-      console.log('ERROR: ' + e.message);
+      console.log("ERROR: " + e.message);
     }
   },
   // Đăng nhập tài khoản customer
@@ -124,6 +124,7 @@ module.exports = {
   },
   // Đổi mật khẩu tài khoản customer
   changePasswordCustomer: async (entity) => {
+    console.log(entity);
     const customerExist = await Customer.findOne({ username: entity.username });
     if (customerExist === null) return null;
     const password = customerExist.password;
@@ -134,66 +135,112 @@ module.exports = {
         { username: entity.username },
         {
           password: hash,
-        },
+        }
       );
       return true;
     }
     return null;
   },
+  resetPassword: async (entity) => {
+    const customerExist = await Customer.findOne({ username: entity.username });
+    if (customerExist === null) return null;
+    else {
+      const hash = bcrypt.hashSync(entity.newPassword, 10);
+      await Customer.findOneAndUpdate(
+        { username: entity.username },
+        {
+          password: hash,
+        }
+      );
+      return true;
+    }
+  },
+
+  updateNameCustomer: async (username, name) => {
+    const customerExist = await Customer.findOneAndUpdate(
+      { username: username },
+      { name }
+    );
+    if (customerExist === null) return null;
+    else {
+      return true;
+    }
+  },
+
+  updateListReceivers: async (username, listReceivers) => {
+    console.log(listReceivers);
+    const customerExist = await Customer.findOneAndUpdate(
+      { username: username },
+      { listReceivers }
+    );
+    if (customerExist === null) return null;
+    else {
+      return true;
+    }
+  },
+
   //Tạo mã OTP
-  otpGenerate: async (username, email) => {
-    const secret = 'secretOTP' + username + email;
-
-    const OTP = speakeasy.totp({
-      secret: secret,
-      encoding: 'base32',
-    });
-
+  otpGenerate: async () => {
+    const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
     return OTP;
   },
-  //Xác nhận mã OTP
-  otpValidate: async (OTP, username, email) => {
-    const secret = 'secretOTP' + username + email;
-
-    var tokenValidates = speakeasy.totp.verify({
-      secret: secret,
-      encoding: 'base32',
-      token: OTP,
-    });
-
-    return tokenValidates;
+  saveOTP: async (username, otp, email) => {
+    issueAt = Date.now();
+    const customer = await Customer.findOne({ username: username });
+    if (email !== customer.email) return false;
+    const ret = await Customer.updateOne(
+      { username: username },
+      { mailOtp: { otp, issueAt } }
+    );
+    return true;
   },
+
   //Gửi mã OTP đễn email customer
-  sendOTP: async (OTP, email) => {
+  sendOTP: async (email, OTP) => {
     var transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: "gmail",
       auth: {
-        user: 'internetbankingnhom1@gmail.com',
-        pass: 'nhom1234',
+        user: "internetbankingnhom1@gmail.com",
+        pass: "nhom1234",
       },
     });
 
     var mailOptions = {
-      from: 'internetbankingnhom1@gmail.com',
+      from: "internetbankingnhom1@gmail.com",
       to: email,
-      subject: 'Forget password',
-      text: 'OTP Code',
-      html: `<b>Mã OTP để reset password của bạn là: ${OTP}</b>`,
+      subject: "Forget password",
+      text: "OTP Code",
+      html: `<p>Mã OTP để reset password của bạn là: <b> ${OTP} </b></p><br> <p>Mã có thời hạn trong vòng 3 phút</p>`,
     };
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) {
         console.log(error);
       } else {
-        console.log('Email sent: ' + info.response);
+        console.log("Email sent: " + info.response);
       }
     });
     return true;
   },
+  //Xác nhận mã OTP
+  otpValidateAndResetPassword: async (OTP, username) => {
+    const ret = await Customer.findOne({
+      username: username,
+    });
+    if (
+      Date.now() - ret.mailOtp.issueAt > 1000 * 60 * 3 ||
+      ret.mailOtp.otp !== OTP
+    )
+      return false;
+    return true;
+  },
   updateRefreshToken: async (username, refreshToken) => {
     try {
-      await Customer.findOneAndUpdate({ username: username }, { refreshToken: refreshToken });
+      await Customer.findOneAndUpdate(
+        { username: username },
+        { refreshToken: refreshToken }
+      );
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
       return 0;
     }
   },
@@ -209,14 +256,14 @@ module.exports = {
   getCustomerByAccount: async (_accountNumber) => {
     try {
       const customer = await Customer.findOne({
-        'checkingAccount.accountNumber': _accountNumber,
+        "checkingAccount.accountNumber": _accountNumber,
       });
       //      listAllCustomers instanceof mongoose.Query; // true
       //    const reslt= await listAllCustomers;
       // console.log(customer);
       return customer;
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
       return 0;
     }
   },
@@ -224,12 +271,15 @@ module.exports = {
   //lấy list customer
   getListCustomers: async () => {
     try {
-      const listAllCustomers = await Customer.find();
+      const listAllCustomers = await Customer.find(
+        {},
+        "username name phone email checkingAccount savingsAccount"
+      );
       //      listAllCustomers instanceof mongoose.Query; // true
       //    const reslt= await listAllCustomers;
       return listAllCustomers;
     } catch (e) {
-      console.log('ERROR: ' + e);
+      console.log("ERROR: " + e);
       return 0;
     }
   },
@@ -237,23 +287,23 @@ module.exports = {
   updateCheckingAmount: async (_accountNumber, _newAmount) => {
     try {
       const u = await Customer.update(
-        { 'checkingAccount.accountNumber': _accountNumber },
-        { 'checkingAccount.amount': _newAmount },
+        { "checkingAccount.accountNumber": _accountNumber },
+        { "checkingAccount.amount": _newAmount }
       );
       // console.log('uupdate', u);
     } catch (err) {
-      console.log('ERR', err.message);
+      console.log("ERR", err.message);
     }
   },
 
   updateSavingAmount: async (_username, _accountNumber, _newAmount) => {
     try {
       const u = await Customer.updateOne(
-        { 'savingsAccount.accountNumber': _accountNumber, username: _username },
-        { $set: { 'savingsAccount.$.amount': _newAmount } },
+        { "savingsAccount.accountNumber": _accountNumber, username: _username },
+        { $set: { "savingsAccount.$.amount": _newAmount } }
       );
     } catch (err) {
-      console.log('ERR', err.message);
+      console.log("ERR", err.message);
     }
   },
 
@@ -270,26 +320,41 @@ module.exports = {
               dateRecharge: date,
             },
           },
-        },
+        }
       );
     } catch (err) {
-      console.log('ERR', err.message);
+      console.log("ERR", err.message);
     }
   },
 
   // update mail OTP by account number
   updateMailOTP: async (accountNumber, otp) => {
     issueAt = Date.now();
-    await Customer.updateOne({ 'checkingAccount.accountNumber': accountNumber }, { mailOtp: { otp, issueAt } });
+    await Customer.updateOne(
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: { otp, issueAt } }
+    );
   },
 
   checkMailOTP: async (accountNumber, otp) => {
     const mailOtp = await Customer.updateOne(
-      { 'checkingAccount.accountNumber': accountNumber },
-      { mailOtp: { otp, issueAt } },
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: { otp, issueAt } }
     );
     console.log(mailOtp);
-    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp) return false;
+    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp)
+      return false;
+    return true;
+  },
+  //Lấy danh sách người nhận
+  checkMailOTP: async (accountNumber, otp) => {
+    const mailOtp = await Customer.updateOne(
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: { otp, issueAt } }
+    );
+    console.log(mailOtp);
+    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp)
+      return false;
     return true;
   },
 };

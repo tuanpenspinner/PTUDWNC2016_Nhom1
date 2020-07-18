@@ -30,9 +30,21 @@ module.exports = {
     res.status(201).end();
   },
   getListRemindersByAccount: async (req, res) => {
-    const accountNumber = req.params.accountNumber;
-    const listReminders = await DebtReminder.getListRemindersByAccount(accountNumber);
-    res.status(200).json(listReminders);
+    const account = await Customer.findOneUserName(req.payload.username);
+    console.log(account);
+    const listReminders = await DebtReminder.getListRemindersByAccount(account.checkingAccount.accountNumber);
+    if (!listReminders) {
+      return res.json({
+        status: "failed",
+        code: 2022,
+      });
+    }
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Lấy danh sách nhắc nợ thành công!",
+      listReminders,
+    });
   },
   cancelReminder: async (req, res) => {
     const reminderId = req.params.id;

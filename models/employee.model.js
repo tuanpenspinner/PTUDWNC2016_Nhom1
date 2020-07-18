@@ -2,23 +2,27 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
 
-const employeeSchema = new Schema({
-  name: {type: String, required: true},
-  username: {type: String, required: true},
-  password: {type: String, required: true},
-  phone: {type: String, required: true},
-  email: {type: String, required: true},
-},{
-  versionKey: false
-});
+const employeeSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    username: { type: String, required: true },
+    password: { type: String, required: true },
+    phone: { type: String, required: true },
+    email: { type: String, required: true },
+    refreshToken: { type: String, default: null },
+  },
+  {
+    versionKey: false,
+  }
+);
 
-const Employee =mongoose.model('Employee', employeeSchema, 'employees');
+const Employee = mongoose.model("Employee", employeeSchema, "employees");
 
 module.exports = {
-//tìm nhân viên theo email
+  //tìm nhân viên theo email
   findByEmail: async (email) => {
     try {
-      const employee = await Employee.findOne({email: email});
+      const employee = await Employee.findOne({ email: email });
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -28,7 +32,7 @@ module.exports = {
   //tìm nhân viên theo username
   findByUsername: async (username) => {
     try {
-      const employee = await Employee.findOne({username: username});
+      const employee = await Employee.findOne({ username: username });
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -47,16 +51,16 @@ module.exports = {
       console.log("ERROR: " + e);
     }
   },
-// Đăng nhập tài khoản employee
-loginEmployee: async (entity) => {
-  const employeeExist = await Employee.findOne({ username: entity.username });
-  if (employeeExist === null) return null;
-  const password = employeeExist.password;
-  if (bcrypt.compareSync(entity.password, password)) {
-    return employeeExist;
-  }
-  return null;
-},
+  // Đăng nhập tài khoản employee
+  loginEmployee: async (entity) => {
+    const employeeExist = await Employee.findOne({ username: entity.username });
+    if (employeeExist === null) return null;
+    const password = employeeExist.password;
+    if (bcrypt.compareSync(entity.password, password)) {
+      return employeeExist;
+    }
+    return null;
+  },
   //thêm employee
   // createEmployee: async (data) => {
   //   try {
@@ -68,9 +72,9 @@ loginEmployee: async (entity) => {
   //   }
   // },
   //xóa employee
-  deleteEmployee: async (email) => {
+  deleteEmployee: async (username) => {
     try {
-      const employee = await Employee.deleteOne({email: email});
+      const employee = await Employee.deleteOne({ username: username });
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
@@ -80,24 +84,32 @@ loginEmployee: async (entity) => {
   //cập nhật employee
   updateEmployee: async (data) => {
     try {
-      const employee = await Employee.findOneAndUpdate({ username: data.username }, { name: data.name, password: data.password, phone: data.phone, email: data.email}, { runValidators: true });
-      return employee;
-  } catch (e) {
-      console.log("ERROR: "+ e);
-      throw e;
-  }
-  },
-  //truy vấn employee theo email
-  getEmployee: async (email) => {
-    try {
-      const employee = await Employee.findOne({email: email});
+      const employee = await Employee.findOneAndUpdate(
+        { username: data.username },
+        {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+        },
+        { runValidators: true }
+      );
       return employee;
     } catch (e) {
       console.log("ERROR: " + e);
       throw e;
     }
   },
-  //lấy danh sách employee 
+  //truy vấn employee theo email
+  getEmployee: async (email) => {
+    try {
+      const employee = await Employee.findOne({ email: email });
+      return employee;
+    } catch (e) {
+      console.log("ERROR: " + e);
+      throw e;
+    }
+  },
+  //lấy danh sách employee
   getListEmployees: async () => {
     try {
       const listEmployees = await Employee.find();
@@ -106,5 +118,23 @@ loginEmployee: async (entity) => {
       console.log("ERROR: " + e);
       throw e;
     }
-  }
+  },
+  updateRefreshToken: async (username, refreshToken) => {
+    try {
+      await Customer.findOneAndUpdate(
+        { username: username },
+        { refreshToken: refreshToken }
+      );
+    } catch (e) {
+      console.log("ERROR: " + e);
+      return 0;
+    }
+  },
+  verifyRefreshToken: async (username, refreshToken) => {
+    const ret = await Customer.findOne({ username: username });
+    const compare = refreshToken === ret.refreshToken;
+    if (compare) return true;
+
+    return null;
+  },
 };
