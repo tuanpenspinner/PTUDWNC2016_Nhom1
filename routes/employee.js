@@ -7,6 +7,7 @@ router.post("/login", employeeController.loginEmployee); //Api đăng nhập c�
 router.post("/updateInfoPersonal",authEmployee, employeeController.updateInfoProfile); //Update thông tin employee
 router.get("/info/profile", authEmployee, employeeController.getEmployeeInfo); //Lấy thông tin employee
 router.get("/account-customers", authEmployee, employeeController.getAllAccountCustomers);
+router.get("/historyDealOfCustomer/:username", employeeController.getHistoryDealOfCustomer); //lấy lịch sử giao dịch của 1 customer
 router.post("/refreshToken", employeeController.refreshToken); //Lấy lại token
 //router.get("/info-customer",employeeController.getInfoCustomer);
 module.exports = router;
