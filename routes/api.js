@@ -11,11 +11,12 @@ router.get('/', (req, res) => {
 });
 
 // public apis
-router.post('/money-transfer', moneyTransferController.postMoneyTransfer);
-router.post('/bank-detail', authCustomer, moneyTransferController.bankDetail);
+router.post('/money-transfer', moneyTransferController.moneyTransfer);
+router.post('/bank-detail', moneyTransferController.bankDetail);
 
 // internal apis
-router.get('/money-transfer', moneyTransferController.moneyTransfer);
+router.post('/interal-bank-detail', authCustomer, moneyTransferController.internalBankDetail);
+router.post('/interal-money-transfer', moneyTransferController.internalMoneyTransfer);
 router.post('/partner-bank-detail', moneyTransferController.partnerBankDetail);
 //router.get('/debt-reminders');
 router.get('/debt-reminders/', authCustomer, debtReminderController.getListRemindersByAccount);

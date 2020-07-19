@@ -62,7 +62,6 @@ async function verifySig(req) {
   try {
     checkSecurity(req, true);
     const { bank_code, sig, ts } = req.headers;
-
     // verify
     switch (bank_code) {
       case 'PPNBank':
@@ -73,6 +72,7 @@ async function verifySig(req) {
           // const genSig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
           // console.log('genSig', genSig);
           const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
+          console.log('verify', verification_result)
           if (!verification_result) {
             throw new Error('Verify your RSA signature failed.');
           }
@@ -82,6 +82,7 @@ async function verifySig(req) {
         {
           const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
           const hashString = hash.MD5(sigString); // return hex encoding string
+          console.log("hashString", hashString);
 
           const privateKeyArmored = pgpPrivateKeyString;
           const publicKeyArmored = pgpPublicKeyString;
@@ -110,6 +111,7 @@ async function verifySig(req) {
         }
         break;
       default:
+        throw new Error("Bank code is not correct.");
     }
   } catch (err) {
     throw new Error(err.message);
@@ -138,7 +140,25 @@ async function verifySig(req) {
 // }
 
 module.exports = {
+  // cho phep doi tac goi vao api nay de lay thong tin
   bankDetail: async (req, res) => {
+    try {
+      const { account_number } = req.body;
+      console.log(req.body);
+      if (!account_number) throw new Error('account_number is missing in request body.');
+
+      checkSecurity(req);
+      const account = await customerModel.getCustomerByAccount(account_number);
+      if (!account) throw new Error('Account not found.');
+      res.json({
+        name: account.name,
+        account_number: account.checkingAccount.accountNumber,
+      });
+    } catch (err) {
+      res.status(401).json({ message: `${err.message}` });
+    }
+  },
+  internalBankDetail: async (req, res) => {
     try {
       const { account_number } = req.body;
       console.log(req.body);
@@ -211,10 +231,9 @@ module.exports = {
               if (err) {
                 console.log(err);
                 res.status(404).json({ message: "Khong tim thay thong tin" });
+                return;
               }
               const name = JSON.parse(result.res.text || {}).name || 'Không tìm thấy thông tin';
-
-              console.log('name api', name);
               res.status(200).json({ account_number, name });
             });
         }
@@ -230,113 +249,149 @@ module.exports = {
 
     // res.json({});
   },
-  moneyTransfer: async (req, res) => {
+  internalMoneyTransfer: async (req, res) => {
     // api noi bo
     // lay bank_code sau do goi api cua partner de thuc hien y/c chuyen tien
-    const { bank_code, amount, transferer, receiver } = req.body;
-    switch (bank_code) {
-      case 'CryptoBank':
-        {
-          const signRequest = async (data) => {
-            // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
-            const privateKeyArmored = pgpPrivateKeyString;
-            const passphrase = 'Hiphop_never_die'; // PGP passphrase
-
-            const {
-              keys: [privateKey],
-            } = await openpgp.key.readArmored(privateKeyArmored);
-            await privateKey.decrypt(passphrase);
-
-            const { signature: detachedSignature } = await openpgp.sign({
-              message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
-              privateKeys: [privateKey], // for signing
-              detached: true,
-            });
-            return JSON.stringify(detachedSignature);
-          };
-
-          const body = {
-            partner_code: MY_BANK_CODE,
-            amount: amount,
-            depositor: transferer,
-            receiver: receiver,
-          };
-          const requestTime = moment().format();
-          const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
-          const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
-          const signature = await signRequest(hashString);
-          console.log('signature', signature);
-
-          const headers = {
-            'Content-Type': 'application/json',
-            'x-partner-code': MY_BANK_CODE,
-            'x-partner-request-time': requestTime,
-            'x-partner-hash': hashString,
-          };
-          axios
-            .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${receiver.account_number}`, body, {
-              headers: headers,
-            })
-            .then((res) => {
-              console.log('resss', res);
-              res.json(res.data);
-            })
-            .catch((err) => console.log('ERR', err.message));
-        }
-        break;
-      case 'PPNBank':
-        {
-          const { bank_code, content, amount, transferer, receiver, payFee } = req.body;
-          // sign
-          const ts = moment().valueOf();
-          const body = {
-            amount,
-            content,
-            transferer,
-            receiver,
-            payFee,
-          };
-          const hashString = hash.MD5(MY_BANK_CODE + ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
-          const sig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
-          const headers = {
-            ts,
-            bank_code: MY_BANK_CODE,
-            sig,
-          };
-          let isTrasfered = false;
-          const date = Date.now().toString();
-          const payFeeBy = payFee;
-          const type = {
-            name: 'transfer',
-            bankCode: bank_code,
-          };
-
-          superagent
-            .post(`${PARTNERS[bank_code].apiRoot}/accounts/receive`)
-            .send(body)
-            .set(headers)
-            .end(async (err, result) => {
-              const account = await customerModel.getCustomerByAccount(transferer);
-              const balance = parseInt(account.checkingAccount.amount);
-              const newAmount = balance - amount;
-              await customerModel.updateCheckingAmount(transferer, newAmount);
-              isTrasfered = true;
-              await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-              res.status(200).json({});
-            });
-        }
-        break;
-      case 'LocalBank':
-        {
-        }
-        break;
-      default:
-        console.log('ERR bank_code wrong');
-    }
-  },
-  postMoneyTransfer: async (req, res) => {
     try {
-      verifySig(req);
+      const { bank_code } = req.body;
+      switch (bank_code) {
+        case "TUB":
+          {
+            const { amount, content, transferer, receiver, payFee } = req.body;
+            if (isNaN(amount)) throw new Error('There is error in your request body.');
+            const receiverAcc = await customerModel.getCustomerByAccount(receiver);
+            const transfererAcc = await customerModel.getCustomerByAccount(transferer);
+            if (!receiverAcc || !transfererAcc) throw new Error('Account not found.');
+
+            const date = Date.now().toString();
+            let isTrasfered = false;
+            const payFeeBy = payFee;
+            const type = {
+              name: 'receive',
+              bankCode: bank_code,
+            };
+            const transfererBalance = parseInt(transfererAcc.checkingAccount.amount);
+            const receiverBalance = parseInt(receiverAcc.checkingAccount.amount);
+            if (transfererBalance >= parseInt(amount)) {
+              await customerModel.updateCheckingAmount(receiver, receiverBalance + amount);
+              await customerModel.updateCheckingAmount(transferer, transfererBalance - amount);
+              isTrasfered = true;
+            } else {
+              throw new Error('Tài khoản người gửi không đủ tiền.');
+            }
+
+            await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+            res.status(200).json({ message: 'Transfer money done' });
+          }
+          break;
+        case 'CryptoBank':
+          {
+            const signRequest = async (data) => {
+              // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
+              const privateKeyArmored = pgpPrivateKeyString;
+              const passphrase = 'Hiphop_never_die'; // PGP passphrase
+
+              const {
+                keys: [privateKey],
+              } = await openpgp.key.readArmored(privateKeyArmored);
+              await privateKey.decrypt(passphrase);
+
+              const { signature: detachedSignature } = await openpgp.sign({
+                message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
+                privateKeys: [privateKey], // for signing
+                detached: true,
+              });
+              return JSON.stringify(detachedSignature);
+            };
+
+            const body = {
+              partner_code: MY_BANK_CODE,
+              amount: amount,
+              depositor: transferer,
+              receiver: receiver,
+            };
+            const requestTime = moment().format();
+            const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
+            const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
+            const signature = await signRequest(hashString);
+            console.log('signature', signature);
+
+            const headers = {
+              'Content-Type': 'application/json',
+              'x-partner-code': MY_BANK_CODE,
+              'x-partner-request-time': requestTime,
+              'x-partner-hash': hashString,
+            };
+            axios
+              .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${receiver.account_number}`, body, {
+                headers: headers,
+              })
+              .then((res) => {
+                console.log('resss', res);
+                res.json(res.data);
+              })
+              .catch((err) => console.log('ERR', err.message));
+          }
+          break;
+        case 'PPNBank':
+          {
+            const { bank_code, content, amount, transferer, receiver, payFee } = req.body;
+            // sign
+            const ts = moment().valueOf();
+            const body = {
+              amount,
+              content,
+              transferer,
+              receiver,
+              payFee,
+            };
+            const hashString = hash.MD5(MY_BANK_CODE + ts + JSON.stringify(body) + PARTNERS.PPNBank.secret);
+            const sig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
+            const headers = {
+              ts,
+              bank_code: MY_BANK_CODE,
+              sig,
+            };
+            let isTrasfered = false;
+            const date = Date.now().toString();
+            const payFeeBy = payFee;
+            const type = {
+              name: 'transfer',
+              bankCode: bank_code,
+            };
+
+            superagent
+              .post(`${PARTNERS[bank_code].apiRoot}/accounts/receive`)
+              .send(body)
+              .set(headers)
+              .end(async (err, result) => {
+                if (err) throw new Error(err.message);
+                console.log('res chuyen tien', result);
+                const account = await customerModel.getCustomerByAccount(transferer);
+                const balance = parseInt(account.checkingAccount.amount);
+                const newAmount = balance - amount;
+                await customerModel.updateCheckingAmount(transferer, newAmount);
+                isTrasfered = true;
+                await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+                res.status(200).json({ message: 'Transfer money done' });
+              });
+          }
+          break;
+        case 'LocalBank':
+          {
+          }
+          break;
+        default:
+          console.log('ERR bank_code wrong');
+          res.status(401).json({ message: "ERR bank_code wrong" });
+      }
+    }
+    catch (err) { res.status(400).json({ message: err.message }) }
+  },
+  // doi tac goi vao de chuyen tien
+  moneyTransfer: async (req, res) => {
+    try {
+      await verifySig(req);
       const { amount, content, transferer, receiver, payFee } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
       const account = await customerModel.getCustomerByAccount(receiver);
@@ -362,7 +417,8 @@ module.exports = {
       // await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
       res.status(200).json({ message: 'Transfer money done' });
     } catch (err) {
-      res.status(401).json({ message: err.message, headers: req.headers });
+      console.log("errorrr", err);
+      res.status(400).json({ message: err.message, headers: req.headers });
     }
   },
 };
