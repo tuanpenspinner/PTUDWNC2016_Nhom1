@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const administratorController= require("../controllers/administrator.controller");
+const administratorController = require("../controllers/administrator.controller");
+const authAdmin = require("../middleware/auth.administrator");
 
-router.get("/list-employee", administratorController.getAllEmployees);
-router.get("/get-employee", administratorController.getEmployee);
-router.post("/register-employee", administratorController.registerEmployee);
-router.post("/delete-employee", administratorController.deleteEmployee);
-router.post("/update-employee", administratorController.updateEmployee);
+router.get("/list-employee",authAdmin, administratorController.getAllEmployees);
+router.get("/get-employee",authAdmin, administratorController.getEmployee);
+router.post("/register-employee",authAdmin, administratorController.registerEmployee);
+router.post("/delete-employee",authAdmin, administratorController.deleteEmployee);
+router.post("/update-employee",authAdmin, administratorController.updateEmployee);
 router.post("/register", administratorController.registerAdmin);
 router.post("/login", administratorController.loginAdmin);
-router.post("/refresh-token", administratorController.refreshToken);
+router.post("/refresh-token",authAdmin, administratorController.refreshToken);
 module.exports = router;

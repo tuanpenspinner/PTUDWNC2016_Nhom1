@@ -253,7 +253,7 @@ exports.refreshToken = async (req, res) => {
   }
 };
 const generateAccessToken = (payload) => {
-  const accessToken = jwt.sign(payload, "secretKeyAdmin", {
+  const accessToken = jwt.sign(payload, "secretKeyAdministrator", {
     expiresIn: "1d", // 1 day
   });
 
