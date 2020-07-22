@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const paySchema = new Schema(
@@ -6,7 +6,7 @@ const paySchema = new Schema(
     isPaid: { type: Boolean, default: false, required: true },
     timePay: { type: Date },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const deleteReminderSchema = new Schema(
@@ -15,25 +15,38 @@ const deleteReminderSchema = new Schema(
     timeDelete: { type: Date },
     isDeleteBy: { type: String },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const debtReminderSchema = new Schema({
   creator: { type: String, required: true },
   debtor: { type: String, required: true },
+  nameCreator: { type: String, required: true },
+  nameDebtor: { type: String, required: true },
+
   debt: { type: Number, required: true },
   content: { type: String },
-  timeCreate: { type: Date },
+  timeCreate: { type: String },
   pay: { type: paySchema },
   deleteReminder: { type: deleteReminderSchema },
 });
 
-const debtReminder = mongoose.model('debtReminder', debtReminderSchema, 'debt-reminders');
+const debtReminder = mongoose.model(
+  "debtReminder",
+  debtReminderSchema,
+  "debt-reminders"
+);
 
 module.exports = {
-  createReminder: (entity) => {
-    const reminder = new debtReminder(entity);
-    reminder.save().then();
+  createReminder: async (entity) => {
+    try {
+      const reminder = new debtReminder(entity);
+      await reminder.save();
+      return true
+    } catch (e) {
+      return false
+      console.log("ERROR: " + e.message);
+    }
   },
   getReminderById: async (id) => {
     const reminder = await debtReminder.findOne({ _id: id });
@@ -48,15 +61,24 @@ module.exports = {
     const date = new Date().toString();
     await debtReminder.updateOne(
       { _id: id },
-      { deleteReminder: { isDeleted: true, timeDelete: date, isDeleteBy: account_number } },
+      {
+        deleteReminder: {
+          isDeleted: true,
+          timeDelete: date,
+          isDeleteBy: account_number,
+        },
+      }
     );
   },
   completeReminder: async (id) => {
     const date = new Date().toString();
-    await debtReminder.updateOne({ _id: id }, { pay: { isPaid: true, timePay: date } });
+    await debtReminder.updateOne(
+      { _id: id },
+      { pay: { isPaid: true, timePay: date } }
+    );
   },
-   //lấy lịch sử thanh toán nợ
-   getHistoryPayDebt: async (accountNumber) => {
+  //lấy lịch sử thanh toán nợ
+  getHistoryPayDebt: async (accountNumber) => {
     try {
       const resultHistoryPayDebt = await debtReminder.find({
         $or: [

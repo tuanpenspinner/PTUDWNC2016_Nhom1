@@ -1,21 +1,44 @@
-const nodemailer = require('nodemailer');
-const crypto = require('crypto');
-const async = require('async');
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
+const async = require("async");
 
-const DebtReminder = require('../models/debt-reminder.model');
-const Customer = require('../models/customer.model');
+const DebtReminder = require("../models/debt-reminder.model");
+const Customer = require("../models/customer.model");
 
 module.exports = {
   createReminder: async (req, res) => {
-    const { creator, debtor, debt, content } = req.body;
-    if (!(creator && debtor && debt)) res.status(400).json({ message: 'Missing infomations' });
-    const timeCreate = new Date().toString();
+    const {
+      creator,
+      nameCreator,
+      nameDebtor,
+      debtor,
+      debt,
+      content,
+    } = req.body;
+
+    if (!(creator && debtor && debt))
+      res.status(400).json({ message: "Missing infomations" });
+    var date = new Date();
+    var timeCreate =
+      ("00" + date.getHours()).slice(-2) +
+      ":" +
+      ("00" + date.getMinutes()).slice(-2) +
+      ":" +
+      ("00" + date.getSeconds()).slice(-2)+" "+
+      ("00" + (date.getDate())).slice(-2) +
+      "/" +
+      ("00" + (date.getMonth()+1)).slice(-2) +
+      "/" +
+      date.getFullYear() 
     const newReminder = {
       creator,
+      nameCreator,
       debtor,
+      nameDebtor,
       content,
       debt,
       timeCreate,
+
       pay: {
         isPaid: false,
         timePay: null,
@@ -26,13 +49,20 @@ module.exports = {
         isDeleteBy: null,
       },
     };
-    DebtReminder.createReminder(newReminder);
-    res.status(201).end();
+    console.log(timeCreate);
+
+    const ret = DebtReminder.createReminder(newReminder);
+    if (ret) res.status(201).json({ message: "Thêm thành công" });
+    else {
+      res.status(400).json({ message: "Thêm thất bại" });
+    }
   },
   getListRemindersByAccount: async (req, res) => {
     const account = await Customer.findOneUserName(req.payload.username);
     console.log(account);
-    const listReminders = await DebtReminder.getListRemindersByAccount(account.checkingAccount.accountNumber);
+    const listReminders = await DebtReminder.getListRemindersByAccount(
+      account.checkingAccount.accountNumber
+    );
     if (!listReminders) {
       return res.json({
         status: "failed",
@@ -80,7 +110,7 @@ module.exports = {
         },
         function (otp) {
           let transporter = nodemailer.createTransport({
-            service: 'Gmail',
+            service: "Gmail",
             secure: true, // true for 465, false for other ports
             auth: {
               user: process.env.EMAIL_SENDER,
@@ -91,25 +121,25 @@ module.exports = {
           let mailOptions = {
             to: userMail,
             from: `"TUB Internet Banking" <${process.env.EMAIL_SENDER}>`,
-            subject: 'TUB Internet Banking | Confirm your transfer',
+            subject: "TUB Internet Banking | Confirm your transfer",
             text:
-              'You are receiving this because you (or someone else) have requested the complete debt reminder for your account.\n\n' +
-              'Please use the following OTP to complete the process:\n' +
+              "You are receiving this because you (or someone else) have requested the complete debt reminder for your account.\n\n" +
+              "Please use the following OTP to complete the process:\n" +
               otp +
-              '\n\n' +
-              'If you did not request this, please ignore this email and your account will remain uncharged.\n',
+              "\n\n" +
+              "If you did not request this, please ignore this email and your account will remain uncharged.\n",
           };
           transporter.sendMail(mailOptions, function (err) {
-            console.log('ERR', err.message, process.env.EMAIL_SENDER);
+            console.log("ERR", err.message, process.env.EMAIL_SENDER);
           });
 
-          console.log('gui mail otp done to email: ', userMail);
+          console.log("gui mail otp done to email: ", userMail);
           // res.status(200).json({ message: 'An email has sent to your email' });
         },
       ],
       function (err, result) {
         if (err) throw err;
-      },
+      }
     );
 
     // change pay status
