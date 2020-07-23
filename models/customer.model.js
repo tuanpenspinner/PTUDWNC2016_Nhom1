@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
+const async = require("async");
 const { closeSync } = require("fs");
 
 const checkingAccount0 = new Schema(
@@ -89,7 +90,7 @@ module.exports = {
     }
   },
   // tìm 1 tài khoản customer theo checkingAccountNumber
-  findOneCheckingAccount: async ( accountNumber) => {
+  findOneCheckingAccount: async (accountNumber) => {
     try {
       let user = await Customer.findOne({
         "checkingAccount.accountNumber": accountNumber,
@@ -178,60 +179,6 @@ module.exports = {
     }
   },
 
-  //Tạo mã OTP
-  otpGenerate: async () => {
-    const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
-    return OTP;
-  },
-  saveOTP: async (username, otp, email) => {
-    issueAt = Date.now();
-    const customer = await Customer.findOne({ username: username });
-    if (email !== customer.email) return false;
-    const ret = await Customer.updateOne(
-      { username: username },
-      { mailOtp: { otp, issueAt } }
-    );
-    return true;
-  },
-
-  //Gửi mã OTP đễn email customer
-  sendOTP: async (email, OTP) => {
-    var transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "internetbankingnhom1@gmail.com",
-        pass: "nhom1234",
-      },
-    });
-
-    var mailOptions = {
-      from: "internetbankingnhom1@gmail.com",
-      to: email,
-      subject: "Forget password",
-      text: "OTP Code",
-      html: `<p>Mã OTP để reset password của bạn là: <b> ${OTP} </b></p><br> <p>Mã có thời hạn trong vòng 3 phút</p>`,
-    };
-    transporter.sendMail(mailOptions, function (error, info) {
-      if (error) {
-        console.log(error);
-      } else {
-        console.log("Email sent: " + info.response);
-      }
-    });
-    return true;
-  },
-  //Xác nhận mã OTP
-  otpValidateAndResetPassword: async (OTP, username) => {
-    const ret = await Customer.findOne({
-      username: username,
-    });
-    if (
-      Date.now() - ret.mailOtp.issueAt > 1000 * 60 * 3 ||
-      ret.mailOtp.otp !== OTP
-    )
-      return false;
-    return true;
-  },
   updateRefreshToken: async (username, refreshToken) => {
     try {
       await Customer.findOneAndUpdate(
@@ -328,32 +275,98 @@ module.exports = {
 
   // update mail OTP by account number
   updateMailOTP: async (accountNumber, otp) => {
-    issueAt = Date.now();
-    await Customer.updateOne(
+    const issueAt = Date.now();
+    const customer = await Customer.findOneAndUpdate(
       { "checkingAccount.accountNumber": accountNumber },
       { mailOtp: { otp, issueAt } }
     );
+    if (!customer) return false;
+    return customer;
   },
 
-  checkMailOTP: async (accountNumber, otp) => {
-    const mailOtp = await Customer.updateOne(
+  resetMailOTP: async (accountNumber) => {
+    const customer = await Customer.findOneAndUpdate(
       { "checkingAccount.accountNumber": accountNumber },
-      { mailOtp: { otp, issueAt } }
+      { mailOtp: { otp: null, issueAt: null } }
     );
-    console.log(mailOtp);
+    if (!customer) return false;
+    return true;
+  },
+
+  // check otp using account
+  checkMailOTP: async (accountNumber, otp) => {
+    const { mailOtp } = await Customer.findOne(
+      { "checkingAccount.accountNumber": accountNumber },
+      { mailOtp: true }
+    );
     if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp)
       return false;
     return true;
   },
-  //Lấy danh sách người nhận
-  checkMailOTP: async (accountNumber, otp) => {
-    const mailOtp = await Customer.updateOne(
-      { "checkingAccount.accountNumber": accountNumber },
+
+  //Tạo mã OTP
+  otpGenerate: async () => {
+    const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
+    return OTP;
+  },
+  // update otp using username
+  saveOTP: async (username, otp, email) => {
+    issueAt = Date.now();
+    const customer = await Customer.findOne({ username: username });
+    if (email !== customer.email) return false;
+    const ret = await Customer.updateOne(
+      { username: username },
       { mailOtp: { otp, issueAt } }
     );
-    console.log(mailOtp);
-    if (Date.now() - mailOtp.issueAt > 1000 * 60 * 3 || mailOtp.otp !== otp)
-      return false;
     return true;
   },
+
+  //Gửi mã OTP đễn email customer
+  sendOTP: async (userMail, OTP) => {
+    try {
+      let transporter = nodemailer.createTransport({
+        service: "Gmail",
+        secure: true, // true for 465, false for other ports
+        auth: {
+          user: process.env.EMAIL_SENDER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+
+      let mailOptions = {
+        to: userMail,
+        from: `"TUB Internet Banking" <${process.env.EMAIL_SENDER}>`,
+        subject: "TUB Internet Banking | Confirm your action",
+        text:
+          "You are receiving this because you (or someone else) have requested the complete debt reminder or money transfer for your account.\n\n" +
+          "Please use the following OTP to complete the process:\n" +
+          OTP +
+          "\n\n" +
+          "If you did not request this, please ignore this email and your account will remain uncharged.\n",
+      };
+      transporter.sendMail(mailOptions, function (err, info) {
+        if (err) {
+          console.log("ERR", err.message);
+          return false;
+        }
+        console.log("gui mail otp done to email: ", userMail);
+        return true;
+      });
+    }
+    catch (err) {
+      console.log("ERR sending mail", err.message);
+    }
+  },
+  //Xác nhận mã OTP su dung username
+  otpValidateAndResetPassword: async (OTP, username) => {
+    const ret = await Customer.findOne({
+      username: username,
+    });
+    if (
+      Date.now() - ret.mailOtp.issueAt > 1000 * 60 * 3 ||
+      ret.mailOtp.otp !== OTP
+    )
+      return false;
+    return true;
+  }
 };

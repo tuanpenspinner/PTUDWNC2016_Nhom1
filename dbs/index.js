@@ -4,7 +4,7 @@ mongoose.Promise = global.Promise;
 
 const connectDB = async () => {
   try {
-    mongoose.connect(process.env.CONNECT_STRING, { useNewUrlParser: true, useUnifiedTopology: true }, (database) =>
+    mongoose.connect(process.env.CONNECT_STRING, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false }, (database) =>
       console.log('connected'),
     );
   } catch (error) {

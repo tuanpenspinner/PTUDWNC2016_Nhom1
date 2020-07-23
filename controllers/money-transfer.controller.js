@@ -29,6 +29,7 @@ const PARTNERS = {
   },
   TUB: {
     // my bank - just to handle PGP call that come from TUB client
+    // TUB here is a partner of LocalBank (TUB server)
     bank_code: "TUB"
   }
 };
@@ -131,7 +132,7 @@ module.exports = {
         account_number: account.checkingAccount.accountNumber,
       });
     } catch (err) {
-      res.status(401).json({ message: `${err.message}` });
+      res.status(404).json({ message: `${err.message}` });
     }
   },
   internalBankDetail: async (req, res) => {
@@ -148,40 +149,14 @@ module.exports = {
         account_number: account.checkingAccount.accountNumber,
       });
     } catch (err) {
-      res.status(401).json({ message: `${err.message}` });
+      res.status(404).json({ message: `${err.message}` });
     }
   },
   partnerBankDetail: (req, res) => {
     // api noi bo - get thong tin tai khoan ngan hang partners
     // body = { bank_code, account_number }
     const { bank_code, account_number } = req.body;
-    console.log('body', req.body);
     switch (bank_code) {
-      case 'CryptoBank':
-        {
-          const requestTime = moment().format();
-          const body = {};
-          const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
-          const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
-          console.log('hashssss', hashString, requestTime);
-
-          const headers = {
-            'Content-Type': 'application/json',
-            'x-partner-code': MY_BANK_CODE,
-            'x-partner-request-time': requestTime,
-            'x-partner-hash': hashString,
-          };
-          axios
-            .get(`${PARTNERS[bank_code].apiRoot}/services/account_number/${account_number}`, {
-              headers: headers,
-            })
-            .then((result) => {
-              console.log('resss', result);
-              res.json(result.data);
-            })
-            .catch((err) => console.log('ERR', err.message));
-        }
-        break;
       case 'PPNBank':
         {
           const body = {
@@ -197,16 +172,16 @@ module.exports = {
             partnerCode,
             sig,
           };
+          console.log("header", headers);
 
           superagent
             .post(`${PARTNERS[bank_code].apiRoot}/accounts/PPNBankDetail`)
             .send(body)
             .set(headers)
             .end((err, result) => {
-              // if (err) res.status(201).json({ message: 'Đã xảy ra lỗi khi tìm thông tin ngân hàng đối tác' });
               if (err) {
                 console.log(err);
-                res.status(404).json({ message: "Khong tim thay thong tin" });
+                res.status(404).json({ message: "Đã xảy ra lỗi khi tìm thông tin ở ngân hàng đối tác" });
                 return;
               }
               const name = JSON.parse(result.res.text || {}).name || 'Không tìm thấy thông tin';
@@ -220,10 +195,8 @@ module.exports = {
         }
         break;
       default:
-        console.log('ERR bank_code wrong');
+        res.status(400).json({ message: 'ERR bank_code wrong' });
     }
-
-    // res.json({});
   },
   internalMoneyTransfer: async (req, res) => {
     // api noi bo
@@ -341,14 +314,19 @@ module.exports = {
               .send(body)
               .set(headers)
               .end(async (err, result) => {
-                if (err) throw new Error(err.message);
-                const account = await customerModel.getCustomerByAccount(transferer);
-                const balance = parseInt(account.checkingAccount.amount);
-                const newAmount = balance - amount;
-                await customerModel.updateCheckingAmount(transferer, newAmount);
-                isTrasfered = true;
-                await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-                res.status(200).json({ message: 'Transfer money done' });
+                try {
+                  if (err) throw new Error(err.message);
+                  const account = await customerModel.getCustomerByAccount(transferer);
+                  const balance = parseInt(account.checkingAccount.amount);
+                  const newAmount = balance - amount;
+                  await customerModel.updateCheckingAmount(transferer, newAmount);
+                  isTrasfered = true;
+                  await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+                  res.status(200).json({ message: 'Transfer money done' });
+                }
+                catch (err) {
+                  res.status(400).json({ message: err.message });
+                }
               });
           }
           break;
@@ -451,10 +429,10 @@ module.exports = {
         throw new Error('There is error in your request body.');
       }
 
-      // await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+      await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
       res.status(200).json({ message: 'Transfer money done' });
     } catch (err) {
-      console.log("ERROR DONE", err.message);
+      console.log("ERROR FINAL", err.message);
       res.status(400).json({ message: err.message });
     }
   },
