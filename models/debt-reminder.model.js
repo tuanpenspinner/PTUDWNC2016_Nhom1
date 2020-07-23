@@ -42,9 +42,9 @@ module.exports = {
     try {
       const reminder = new debtReminder(entity);
       await reminder.save();
-      return true
+      return true;
     } catch (e) {
-      return false
+      return false;
       console.log("ERROR: " + e.message);
     }
   },
@@ -72,10 +72,13 @@ module.exports = {
   },
   completeReminder: async (id) => {
     const date = new Date().toString();
-    await debtReminder.updateOne(
+    const ret = await debtReminder.updateOne(
       { _id: id },
       { pay: { isPaid: true, timePay: date } }
     );
+    if (ret) return true;
+    else return false
+    
   },
   //lấy lịch sử thanh toán nợ
   getHistoryPayDebt: async (accountNumber) => {

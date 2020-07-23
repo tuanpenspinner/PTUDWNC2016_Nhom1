@@ -24,12 +24,13 @@ module.exports = {
       ":" +
       ("00" + date.getMinutes()).slice(-2) +
       ":" +
-      ("00" + date.getSeconds()).slice(-2)+" "+
-      ("00" + (date.getDate())).slice(-2) +
+      ("00" + date.getSeconds()).slice(-2) +
+      " " +
+      ("00" + date.getDate()).slice(-2) +
       "/" +
-      ("00" + (date.getMonth()+1)).slice(-2) +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
       "/" +
-      date.getFullYear() 
+      date.getFullYear();
     const newReminder = {
       creator,
       nameCreator,
@@ -93,57 +94,58 @@ module.exports = {
 
     console.log(debtor);
     // send mail OTP
-    async.waterfall(
-      [
-        function (done) {
-          let otp = Math.floor(Math.random() * 9999 + 1);
-          done(err, otp);
-        },
-        function (otp, done) {
-          Customer.updateMailOTP(accountNumber, otp)
-            .then(() => {
-              done(null, otp);
-            })
-            .catch((err) => {
-              throw err.message;
-            });
-        },
-        function (otp) {
-          let transporter = nodemailer.createTransport({
-            service: "Gmail",
-            secure: true, // true for 465, false for other ports
-            auth: {
-              user: process.env.EMAIL_SENDER,
-              pass: process.env.EMAIL_PASSWORD,
-            },
-          });
+    // async.waterfall(
+    //   [
+    //     function (done) {
+    //       let otp = Math.floor(Math.random() * 9999 + 1);
+    //       done(err, otp);
+    //     },
+    //     function (otp, done) {
+    //       Customer.updateMailOTP(accountNumber, otp)
+    //         .then(() => {
+    //           done(null, otp);
+    //         })
+    //         .catch((err) => {
+    //           throw err.message;
+    //         });
+    //     },
+    //     function (otp) {
+    //       let transporter = nodemailer.createTransport({
+    //         service: "Gmail",
+    //         secure: true, // true for 465, false for other ports
+    //         auth: {
+    //           user: process.env.EMAIL_SENDER,
+    //           pass: process.env.EMAIL_PASSWORD,
+    //         },
+    //       });
 
-          let mailOptions = {
-            to: userMail,
-            from: `"TUB Internet Banking" <${process.env.EMAIL_SENDER}>`,
-            subject: "TUB Internet Banking | Confirm your transfer",
-            text:
-              "You are receiving this because you (or someone else) have requested the complete debt reminder for your account.\n\n" +
-              "Please use the following OTP to complete the process:\n" +
-              otp +
-              "\n\n" +
-              "If you did not request this, please ignore this email and your account will remain uncharged.\n",
-          };
-          transporter.sendMail(mailOptions, function (err) {
-            console.log("ERR", err.message, process.env.EMAIL_SENDER);
-          });
+    //       let mailOptions = {
+    //         to: userMail,
+    //         from: `"TUB Internet Banking" <${process.env.EMAIL_SENDER}>`,
+    //         subject: "TUB Internet Banking | Confirm your transfer",
+    //         text:
+    //           "You are receiving this because you (or someone else) have requested the complete debt reminder for your account.\n\n" +
+    //           "Please use the following OTP to complete the process:\n" +
+    //           otp +
+    //           "\n\n" +
+    //           "If you did not request this, please ignore this email and your account will remain uncharged.\n",
+    //       };
+    //       transporter.sendMail(mailOptions, function (err) {
+    //         console.log("ERR", err.message, process.env.EMAIL_SENDER);
+    //       });
 
-          console.log("gui mail otp done to email: ", userMail);
-          // res.status(200).json({ message: 'An email has sent to your email' });
-        },
-      ],
-      function (err, result) {
-        if (err) throw err;
-      }
-    );
+    //       console.log("gui mail otp done to email: ", userMail);
+    //       // res.status(200).json({ message: 'An email has sent to your email' });
+    //     },
+    //   ],
+    //   function (err, result) {
+    //     if (err) throw err;
+    //   }
+    // );
 
-    // change pay status
-    await DebtReminder.completeReminder(reminderId);
-    res.status(200).end();
+    // // change pay status
+    const ret = await DebtReminder.completeReminder(reminderId);
+    if (ret) res.status(200).json({ message: "Trả nợ thành công!" });
+    else res.status(400).json({ message: "Trả nợ thất bại" });
   },
 };
