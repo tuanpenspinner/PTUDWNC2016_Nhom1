@@ -172,7 +172,6 @@ module.exports = {
             partnerCode,
             sig,
           };
-          console.log("header", headers);
 
           superagent
             .post(`${PARTNERS[bank_code].apiRoot}/accounts/PPNBankDetail`)
