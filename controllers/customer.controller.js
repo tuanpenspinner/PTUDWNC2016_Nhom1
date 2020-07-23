@@ -1,4 +1,6 @@
 const Customer = require("../models/customer.model");
+const Deal = require("../models/deal.model");
+const DebtReminder = require("../models/debt-reminder.model");
 const jwt = require("jsonwebtoken");
 const randToken = require("rand-token");
 
@@ -167,7 +169,98 @@ exports.updateListReceivers = async (req, res) => {
     });
   }
 };
+//láy lịch sử chuyển khoản
+exports.getHistoryTransfer = async (req, res) => {
+  const username = req.payload.username;
+  try {
+    const customer = await Customer.findOneUserName(username);
+    if (!customer) {
+      return res.json({
+        status: "failed",
+        code: 2022,
+        message: "Tài khoản không tồn tại!",
+      });
+    }
+    var historyTransfer = await Deal.getHistoryTransfer(
+      customer.checkingAccount.accountNumber
+    );
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Truy vấn lịch sử chuyển tiền thành công!",
+      historyTransfer,
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
 
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Truy vấn lịch sử chuyển tiền thất bại!",
+    });
+  }
+};
+//láy lịch sử nhận tiền
+exports.getHistoryReceive = async (req, res) => {
+  const username = req.payload.username;
+  try {
+    const customer = await Customer.findOneUserName(username);
+    if (!customer) {
+      return res.json({
+        status: "failed",
+        code: 2022,
+        message: "Tài khoản không tồn tại!",
+      });
+    }
+    var historyReceive = await Deal.getHistoryReceive(
+      customer.checkingAccount.accountNumber
+    );
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Truy vấn lịch sử nhận tiền thành công!",
+      historyReceive,
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Truy vấn lịch sử nhận tiền thất bại!",
+    });
+  }
+};//láy lịch sử thanh toán nợ
+exports.getHistoryPayDebt = async (req, res) => {
+  const username = req.payload.username;
+  try {
+    const customer = await Customer.findOneUserName(username);
+    if (!customer) {
+      return res.json({
+        status: "failed",
+        code: 2022,
+        message: "Tài khoản không tồn tại!",
+      });
+    }
+    var historyPayDebt = await DebtReminder.getHistoryPayDebt(
+      customer.checkingAccount.accountNumber
+    );
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Truy vấn lịch sử thanh toán nhắc nợ thành công!",
+      historyPayDebt,
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Truy vấn lịch sử thanh toán nhắc nợ thất bại!",
+    });
+  }
+};
 //Đăng kí customer
 exports.registerCustomer = async (req, res) => {
   try {
