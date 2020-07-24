@@ -230,7 +230,7 @@ exports.getHistoryReceive = async (req, res) => {
       message: "Truy vấn lịch sử nhận tiền thất bại!",
     });
   }
-};//láy lịch sử thanh toán nợ
+}; //láy lịch sử thanh toán nợ
 exports.getHistoryPayDebt = async (req, res) => {
   const username = req.payload.username;
   try {
@@ -375,7 +375,8 @@ exports.otpGenerate = async (req, res) => {
 exports.saveAndSendOTP = async (req, res) => {
   try {
     const entity = req.body;
-    const OTP = Math.floor(Math.random() * 9999 + 1);
+    console.log(entity);
+    const OTP = Math.floor(Math.random() * (999999 - 100000) + 100000);
     const ret = await Customer.saveOTP(entity.username, OTP, entity.email);
     if (ret) {
       const send = await Customer.sendOTP(entity.email, OTP);
@@ -403,7 +404,11 @@ exports.saveAndSendOTPByAccount = async (req, res) => {
   try {
     const entity = req.body;
     const OTP = Math.floor(Math.random() * 9999 + 1);
-    const ret = await Customer.saveOTP(entity.checkingAccount.accountNumber, OTP, entity.email);
+    const ret = await Customer.saveOTP(
+      entity.checkingAccount.accountNumber,
+      OTP,
+      entity.email
+    );
     if (ret) {
       const send = await Customer.sendOTP(entity.email, OTP);
       if (send === false)

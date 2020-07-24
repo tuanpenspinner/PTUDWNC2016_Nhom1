@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const paySchema = new Schema(
   {
     isPaid: { type: Boolean, default: false, required: true },
-    timePay: { type: Date },
+    timePay: { type: String },
   },
   { _id: false }
 );
@@ -12,8 +12,9 @@ const paySchema = new Schema(
 const deleteReminderSchema = new Schema(
   {
     isDeleted: { type: Boolean, default: false, required: true },
-    timeDelete: { type: Date },
+    timeDelete: { type: String },
     isDeleteBy: { type: String },
+    nameDelete: { type: String },
   },
   { _id: false }
 );
@@ -50,35 +51,66 @@ module.exports = {
   },
   getReminderById: async (id) => {
     const reminder = await debtReminder.findOne({ _id: id });
-    return reminder;
+    if (reminder) return true;
+    else return false;
   },
   getListRemindersByAccount: async (account_number) => {
     const listOfMe = await debtReminder.find({ creator: account_number });
     const listOfOthers = await debtReminder.find({ debtor: account_number });
     return { listOfMe, listOfOthers };
   },
-  cancelReminder: async (id, account_number) => {
-    const date = new Date().toString();
-    await debtReminder.updateOne(
-      { _id: id },
-      {
-        deleteReminder: {
-          isDeleted: true,
-          timeDelete: date,
-          isDeleteBy: account_number,
-        },
-      }
-    );
+  cancelReminder: async (id, accountNumber, name) => {
+    var date = new Date();
+    var timeCancel =
+      ("00" + date.getHours()).slice(-2) +
+      ":" +
+      ("00" + date.getMinutes()).slice(-2) +
+      ":" +
+      ("00" + date.getSeconds()).slice(-2) +
+      " " +
+      ("00" + date.getDate()).slice(-2) +
+      "/" +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
+      "/" +
+      date.getFullYear();
+    try {
+      const ret = await debtReminder.updateOne(
+        { _id: id },
+        {
+          deleteReminder: {
+            isDeleted: true,
+            timeDelete: timeCancel,
+            isDeleteBy: accountNumber,
+            nameDelete: name,
+          },
+        }
+      );
+      return true;
+    } catch (e) {
+      console.log(e);
+      return false;
+    }
   },
   completeReminder: async (id) => {
-    const date = new Date().toString();
+    var date = new Date();
+    var timePay=
+      ("00" + date.getHours()).slice(-2) +
+      ":" +
+      ("00" + date.getMinutes()).slice(-2) +
+      ":" +
+      ("00" + date.getSeconds()).slice(-2) +
+      " " +
+      ("00" + date.getDate()).slice(-2) +
+      "/" +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
+      "/" +
+      date.getFullYear();
     const ret = await debtReminder.updateOne(
       { _id: id },
-      { pay: { isPaid: true, timePay: date } }
+      { pay: { isPaid: true, timePay: timePay } }
     );
     if (ret) return true;
-    else return false
-    
+    else return false;
   },
   //lấy lịch sử thanh toán nợ
   getHistoryPayDebt: async (accountNumber) => {

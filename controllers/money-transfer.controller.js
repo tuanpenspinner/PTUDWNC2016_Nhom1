@@ -229,7 +229,7 @@ module.exports = {
             }
 
             await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-            res.status(200).json({ message: 'Transfer money done' });
+            res.status(200).json({status:true, message: 'Transfer money done' });
           }
           break;
         case 'CryptoBank':
@@ -321,10 +321,10 @@ module.exports = {
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-                  res.status(200).json({ message: 'Transfer money done' });
+                  res.status(200).json({status:true, message: 'Transfer money done' });
                 }
                 catch (err) {
-                  res.status(400).json({ message: err.message });
+                  res.status(400).json({status:false, message: err.message });
                 }
               });
           }
@@ -387,7 +387,7 @@ module.exports = {
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-                  res.status(200).json({ message: 'Transfer money done' });
+                  res.status(200).json({status:true, message: 'Transfer money done' });
                 }
                 catch (err) {
                   res.status(400).json({ message: err.message });
@@ -429,7 +429,7 @@ module.exports = {
       }
 
       await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-      res.status(200).json({ message: 'Transfer money done' });
+      res.status(200).json( {status:true, message: 'Transfer money done' });
     } catch (err) {
       console.log("ERROR FINAL", err.message);
       res.status(400).json({ message: err.message });

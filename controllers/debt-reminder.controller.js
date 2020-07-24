@@ -50,7 +50,6 @@ module.exports = {
         isDeleteBy: null,
       },
     };
-    console.log(timeCreate);
 
     const ret = DebtReminder.createReminder(newReminder);
     if (ret) res.status(201).json({ message: "Thêm thành công" });
@@ -79,20 +78,35 @@ module.exports = {
   },
   cancelReminder: async (req, res) => {
     const reminderId = req.params.id;
-    const accountNumber = req.body.account_number;
-    await DebtReminder.cancelReminder(reminderId, accountNumber);
-    res.status(200).end();
+    const { accountNumber, name } = req.body;
+    const ret = await DebtReminder.cancelReminder(
+      reminderId,
+      accountNumber,
+      name
+    );
+    if (ret)
+      res.status(200).json({
+        status: true,
+        message: "Hủy trả nợ thành công!",
+      });
+    else {
+      res.status(400).json({
+        status: false,
+        message: "Hủy trả nợ thất bại!",
+      });
+    }
   },
   completeReminder: async (req, res) => {
     const reminderId = req.params.id;
-    const reminder = await DebtReminder.getReminderById(reminderId);
-    if (!reminder) res.status(404).end();
+    console.log(reminderId);
+    // const reminder = await DebtReminder.getReminderById(reminderId);
+    // if (!reminder) res.status(404).json({ message: "Không tìn thấy id" });
 
-    const debtor = await Customer.getCustomerByAccount(reminder.debtor);
-    const userMail = debtor.email;
-    const accountNumber = debtor.checkingAccount.accountNumber;
+    // const debtor = await Customer.getCustomerByAccount(reminder.debtor);
+    // const userMail = debtor.email;
+    // const accountNumber = debtor.checkingAccount.accountNumber;
 
-    console.log(debtor);
+    // console.log(debtor);
     // send mail OTP
     // async.waterfall(
     //   [
@@ -145,7 +159,8 @@ module.exports = {
 
     // // change pay status
     const ret = await DebtReminder.completeReminder(reminderId);
-    if (ret) res.status(200).json({ message: "Trả nợ thành công!" });
-    else res.status(400).json({ message: "Trả nợ thất bại" });
+    if (ret)
+      res.status(200).json({ status: true, message: "Trả nợ thành công!" });
+    else res.status(400).json({ status: fasle, message: "Trả nợ thất bại" });
   },
 };

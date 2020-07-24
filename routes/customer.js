@@ -44,10 +44,10 @@ router.post(
   customerController.changePasswordCustomer
 ); //Api thay đổi mật khẩu
 router.post("/otpGenerate", customerController.otpGenerate); //Api tạo mã OTP
-router.post("/saveAndSendOTP", customerController.saveAndSendOTP); //Lưu mã OTP vào database
+router.post("/saveAndSendOTP",authCustomer, customerController.saveAndSendOTP); //Lưu mã OTP vào database
 router.post(
   "/otpValidateAndResetPassword",
   customerController.otpValidateAndResetPassword
 ); //Api xác nhận mã OTP và reset password
-router.post("/refreshToken", customerController.refreshToken); //Lấy lại token
+router.post("/refreshToken",authCustomer, customerController.refreshToken); //Lấy lại token
 module.exports = router;

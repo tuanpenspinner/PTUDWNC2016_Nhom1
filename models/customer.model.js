@@ -352,8 +352,7 @@ module.exports = {
         console.log("gui mail otp done to email: ", userMail);
         return true;
       });
-    }
-    catch (err) {
+    } catch (err) {
       console.log("ERR sending mail", err.message);
     }
   },
@@ -368,5 +367,5 @@ module.exports = {
     )
       return false;
     return true;
-  }
+  },
 };
