@@ -17,6 +17,8 @@ const typeSchema = mongoose.Schema(
 const dealSchema = new Schema({
   receiverAccountNumber: { type: String, required: true }, //stk thanh toán của người nhận
   transfererAccountNumber: { type: String, required: true }, //stk thanh toán của người gửi
+  receiverName: { type: String, required: true },
+  transfererName: { type: String, required: true },
   time: {
     type: Date,
     default: null, //thời gian chuyển tiền
@@ -34,6 +36,8 @@ module.exports = {
   addDeal: async (
     receiverAccountNumber,
     transfererAccountNumber,
+    receiverName,
+    transfererName,
     time,
     amount,
     content,
@@ -42,9 +46,11 @@ module.exports = {
     type
   ) => {
     try {
-      const deal = await Deal.create({
+      return await Deal.create({
         receiverAccountNumber,
         transfererAccountNumber,
+        receiverName,
+        transfererName,
         time,
         amount,
         content,
@@ -52,36 +58,23 @@ module.exports = {
         payFeeBy,
         type,
       });
-
-      return deal;
     } catch (e) {
       console.log("ERROR: " + e);
 
       throw e;
     }
   },
-  updateDeal: async (id, time, isTransfered) => {
-    try {
-      const u = await Deal.findOneAndUpdate(
-        { _id: id },
-        { time: time },
-        { isTransfered: isTransfered }
-      );
-      return u;
-      // console.log('uupdate', u);
-    } catch (err) {
-      console.log("ERR", err.message);
-    }
-  },
+
   //lấy lịch sử chuyển tiền
   getHistoryTransfer: async (accountNumber) => {
     try {
-      const resultHistoryTransfer = await Deal.find({
+      const list = await Deal.find({
         transfererAccountNumber: accountNumber,
         isTransfered: true,
       });
-      return resultHistoryTransfer;
-      // console.log('uupdate', u);
+      return list.map(res => {
+        return {...res._doc, time: res._doc.time.toLocaleString('vi-VN')};
+      });
     } catch (err) {
       console.log("ERR", err.message);
     }
@@ -89,12 +82,13 @@ module.exports = {
   //lấy lịch sử nhận tiền
   getHistoryReceive: async (accountNumber) => {
     try {
-      const resultHistoryReceive = await Deal.find({
+      let list = await Deal.find({
         receiverAccountNumber: accountNumber,
         isTransfered: true,
       });
-      return resultHistoryReceive;
-      // console.log('uupdate', u);
+      return list.map(res => {
+        return {...res._doc, time: res._doc.time.toLocaleString('vi-VN')};
+      });
     } catch (err) {
       console.log("ERR", err.message);
     }

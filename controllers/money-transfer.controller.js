@@ -205,7 +205,7 @@ module.exports = {
       switch (bank_code) {
         case "TUB": // chuyen tien noi bo
           {
-            const { amount, content, transferer, receiver, payFee } = req.body;
+            const { amount, content, transferer, receiver, nameTransferer, nameReceiver, payFee } = req.body;
             if (isNaN(amount)) throw new Error('There is error in your request body.');
             const receiverAcc = await customerModel.getCustomerByAccount(receiver);
             const transfererAcc = await customerModel.getCustomerByAccount(transferer);
@@ -228,62 +228,13 @@ module.exports = {
               throw new Error('Tài khoản người gửi không đủ tiền.');
             }
 
-            await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+            await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
             res.status(200).json({status:true, message: 'Transfer money done' });
-          }
-          break;
-        case 'CryptoBank':
-          {
-            const signRequest = async (data) => {
-              // const privateKeyArmored = JSON.parse(`"${config.PRIVATE_KEY}"`); // convert '\n'
-              const privateKeyArmored = pgpPrivateKeyString;
-              const passphrase = 'Hiphop_never_die'; // PGP passphrase
-
-              const {
-                keys: [privateKey],
-              } = await openpgp.key.readArmored(privateKeyArmored);
-              await privateKey.decrypt(passphrase);
-
-              const { signature: detachedSignature } = await openpgp.sign({
-                message: openpgp.cleartext.fromText(data), // CleartextMessage or Message object
-                privateKeys: [privateKey], // for signing
-                detached: true,
-              });
-              return JSON.stringify(detachedSignature);
-            };
-
-            const body = {
-              partner_code: MY_BANK_CODE,
-              amount: amount,
-              depositor: transferer,
-              receiver: receiver,
-            };
-            const requestTime = moment().format();
-            const sigString = MY_BANK_CODE + requestTime + JSON.stringify(body) + PARTNERS[bank_code].secret;
-            const hashString = hash(sigString, { algorithm: 'sha256', encoding: 'hex' });
-            const signature = await signRequest(hashString);
-            console.log('signature', signature);
-
-            const headers = {
-              'Content-Type': 'application/json',
-              'x-partner-code': MY_BANK_CODE,
-              'x-partner-request-time': requestTime,
-              'x-partner-hash': hashString,
-            };
-            axios
-              .post(`${PARTNERS[bank_code].apiRoot}/services/deposits/account_number/${receiver.account_number}`, body, {
-                headers: headers,
-              })
-              .then((res) => {
-                console.log('resss', res);
-                res.json(res.data);
-              })
-              .catch((err) => console.log('ERR', err.message));
           }
           break;
         case 'PPNBank':
           {
-            const { bank_code, content, amount, transferer, receiver, payFee } = req.body;
+            const { bank_code, content, amount, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
             // sign
             const ts = moment().valueOf();
             const body = {
@@ -320,7 +271,7 @@ module.exports = {
                   const newAmount = balance - amount;
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
-                  await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+                  await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
                   res.status(200).json({status:true, message: 'Transfer money done' });
                 }
                 catch (err) {
