@@ -73,7 +73,8 @@ module.exports = {
         isTransfered: true,
       });
       return list.map(res => {
-        return {...res._doc, time: res._doc.time.toLocaleString('vi-VN')};
+        res = res.toObject();
+        return {...res, time: res.time.toLocaleString('vi-VN')};
       });
     } catch (err) {
       console.log("ERR", err.message);
@@ -87,7 +88,8 @@ module.exports = {
         isTransfered: true,
       });
       return list.map(res => {
-        return {...res._doc, time: res._doc.time.toLocaleString('vi-VN')};
+        res = res.toObject();
+        return {...res, time: res.time.toLocaleString('vi-VN')};
       });
     } catch (err) {
       console.log("ERR", err.message);
