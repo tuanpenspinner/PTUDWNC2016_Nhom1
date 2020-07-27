@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const async = require("async");
 
 const DebtReminder = require("../models/debt-reminder.model");
+const Notification = require("../models/notifications.model");
 const Customer = require("../models/customer.model");
 
 module.exports = {
@@ -78,12 +79,44 @@ module.exports = {
   },
   cancelReminder: async (req, res) => {
     const reminderId = req.params.id;
-    const { accountNumber, name } = req.body;
+
+    const {
+      accountNumber,
+      name,
+      accountNumberReceiver,
+      content,
+      types,
+    } = req.body;
+    console.log(types);
+    if (types === 1)
+      var con = name + " đã hủy nhắc nợ mà bạn đã tạo với nội dung: " + content;
+    else var con = name + " đã hủy nhắc với của bạn nội dung: " + content;
+
+    var date = new Date();
+    var time =
+      ("00" + date.getHours()).slice(-2) +
+      ":" +
+      ("00" + date.getMinutes()).slice(-2) +
+      ":" +
+      ("00" + date.getSeconds()).slice(-2) +
+      " " +
+      ("00" + date.getDate()).slice(-2) +
+      "/" +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
+      "/" +
+      date.getFullYear();
     const ret = await DebtReminder.cancelReminder(
       reminderId,
       accountNumber,
       name
     );
+    var ret1 = await Notification.addNotification(
+      accountNumberReceiver,
+      con,
+      time,
+      "delete"
+    );
+
     if (ret)
       res.status(200).json({
         status: true,

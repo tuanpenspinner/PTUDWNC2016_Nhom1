@@ -3,7 +3,19 @@ const router = express.Router();
 const authCustomer = require("../middleware/auth.customer");
 const authEmployee = require("../middleware/auth.employee");
 const customerController = require("../controllers/customer.controller");
+const notificationController = require("../controllers/notification.controller");
 router.get("/list-customer", authEmployee, customerController.getAllCustomers);
+router.get(
+  "/list-notification/:accountNumber",
+  authCustomer,
+  notificationController.getNotifications
+);
+
+router.post(
+  "/add-notification",
+  authCustomer,
+  notificationController.addNotification
+);
 router.get("info/:accountNumber", customerController.getCustomer); //Lấy thông tin customer theo checking account number
 router.get(
   "/nameCustomer/:accountNumber",
@@ -44,10 +56,10 @@ router.post(
   customerController.changePasswordCustomer
 ); //Api thay đổi mật khẩu
 router.post("/otpGenerate", customerController.otpGenerate); //Api tạo mã OTP
-router.post("/saveAndSendOTP",authCustomer, customerController.saveAndSendOTP); //Lưu mã OTP vào database
+router.post("/saveAndSendOTP", authCustomer, customerController.saveAndSendOTP); //Lưu mã OTP vào database
 router.post(
   "/otpValidateAndResetPassword",
   customerController.otpValidateAndResetPassword
 ); //Api xác nhận mã OTP và reset password
-router.post("/refreshToken",authCustomer, customerController.refreshToken); //Lấy lại token
+router.post("/refreshToken", authCustomer, customerController.refreshToken); //Lấy lại token
 module.exports = router;
