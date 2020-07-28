@@ -72,9 +72,9 @@ module.exports = {
         transfererAccountNumber: accountNumber,
         isTransfered: true,
       });
-      return list.map(res => {
+      return list.map((res) => {
         res = res.toObject();
-        return {...res, time: res.time.toLocaleString('vi-VN')};
+        return { ...res, time: res.time.toLocaleString("vi-VN") };
       });
     } catch (err) {
       console.log("ERR", err.message);
@@ -87,9 +87,23 @@ module.exports = {
         receiverAccountNumber: accountNumber,
         isTransfered: true,
       });
-      return list.map(res => {
+      return list.map((res) => {
         res = res.toObject();
-        return {...res, time: res.time.toLocaleString('vi-VN')};
+        return { ...res, time: res.time.toLocaleString("vi-VN") };
+      });
+    } catch (err) {
+      console.log("ERR", err.message);
+    }
+  },
+  getAllTransactionsHistory: async () => {
+    try {
+      let transactionHistory = await Deal.find({
+        "type.bankCode": { $ne: "TUB" },
+        isTransfered: "true",
+      }).sort({ time: -1 });
+      return transactionHistory.map((res) => {
+        res = res.toObject();
+        return { ...res, time: res.time.toLocaleString("vi-VN") };
       });
     } catch (err) {
       console.log("ERR", err.message);

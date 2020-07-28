@@ -1,5 +1,6 @@
 const Employee = require("../models/employee.model");
 const Customer = require("../models/customer.model");
+const Deal = require("../models/deal.model");
 const Admin = require("../models/admin.model");
 const jwt = require("jsonwebtoken");
 const randToken = require("rand-token");
@@ -152,6 +153,30 @@ exports.getAllEmployees = async (req, res) => {
       status: "failed",
       code: 2022,
       message: "Lấy danh sách nhân viên thất bại!",
+    });
+  }
+};
+//lấy tất cả lịch sử giao dịch với đối tác
+exports.getTransactionHistory= async(req, res)=>{
+  try {
+    var transactionHistory = await Deal.getAllTransactionsHistory();
+    if (!transactionHistory) {
+      throw "failed";
+    }
+
+    return res.json({
+      status: "success",
+      code: 2020,
+      message: "Lấy lịch sử giao dịch thành công!",
+      transactionHistory,
+    });
+  } catch (e) {
+    console.log("ERROR: " + e);
+
+    return res.json({
+      status: "failed",
+      code: 2022,
+      message: "Lấy lịch sử giao dịch thất bại!",
     });
   }
 };
