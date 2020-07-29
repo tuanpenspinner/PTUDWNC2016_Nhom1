@@ -182,7 +182,7 @@ module.exports = {
         break;
       case 'LocalBank':
         {
-          console.log('localbank');
+          console.log('localbank is calling api');
         }
         break;
       default:
@@ -274,7 +274,7 @@ module.exports = {
           break;
         case 'LocalBank':
           {
-            const { bank_code, content, amount, transferer, receiver, payFee } = req.body;
+            const { bank_code, content, amount, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
 
             // signing PGP
             const ts = moment().valueOf();
@@ -283,6 +283,8 @@ module.exports = {
               content,
               transferer,
               receiver,
+              nameReceiver,
+              nameTransferer,
               payFee,
             };
             const sigString = MY_BANK_CODE + ts + JSON.stringify(body) + PARTNERS[bank_code].secret;
@@ -330,7 +332,7 @@ module.exports = {
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
-                  res.status(200).json({status:true, message: 'Transfer money done' });
+                  res.status(200).json({status:"success", message: 'Transfer money done' });
                 }
                 catch (err) {
                   res.status(400).json({ message: err.message });
