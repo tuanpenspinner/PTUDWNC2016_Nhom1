@@ -130,7 +130,6 @@ module.exports = {
   internalBankDetail: async (req, res) => {
     try {
       const { account_number } = req.body;
-      console.log(req.body);
       if (!account_number) throw new Error('account_number is missing in request body.');
 
       // checkSecurity(req);
