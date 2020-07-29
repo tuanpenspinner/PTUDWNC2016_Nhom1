@@ -1,5 +1,4 @@
 const fs = require('fs');
-const jwt = require('jsonwebtoken');
 const nodeRSA = require('node-rsa');
 const hash = require('object-hash');
 const superagent = require('superagent');
@@ -14,11 +13,6 @@ const PARTNERS = {
     bank_code: 'PPNBank', // team Phong Le
     secret: 'phongledeptrai',
     apiRoot: 'https://ppnbank.herokuapp.com/api',
-  },
-  CryptoBank: {
-    bank_code: 'CryptoBank', // team Dang Thanh Tuan
-    secret: 'CryptoBank_secret',
-    apiRoot: 'https://crypto-bank-1612785.herokuapp.com/api',
   },
   LocalBank: {
     // test PGP local - internal bank
@@ -54,7 +48,6 @@ const partnerRSAPublicKey = new nodeRSA().importKey(parterRsaPublicKeyString);
 function checkSecurity(req, isMoneyAPI = false) {
   const { bank_code, sig, ts } = req.headers;
   // check partner code
-  console.log("check secure info", bank_code, sig, ts);
   if (!PARTNERS[bank_code]) throw new Error('Your bank_code is not correct');
   // check time in 5 minute
   if (Date.now() - parseInt(ts) > 1000 * 60 * 5) throw new Error('Time exceed.');
@@ -81,6 +74,7 @@ async function verifySig(req) {
           // console.log('genSig', genSig);
 
           const verification_result = partnerRSAPublicKey.verify(hashString, sig, 'hex', 'hex');
+          // const verification_result = rsaPublicKey.verify(hashString, sig, 'hex', 'hex');
           console.log('verify', verification_result)
           if (!verification_result) {
             throw new Error('Verify your RSA signature failed.');
@@ -93,12 +87,10 @@ async function verifySig(req) {
           const hashString = hash.MD5(sigString); // return hex encoding string
           console.log("hashString in verifySig", hashString);
 
-          const publicKeyArmored = pgpPublicKeyString;
-
           // verifying PGP signed message
           const verified = await openpgp.verify({
             message: await openpgp.cleartext.readArmored(JSON.parse(sig)), // parse armored message
-            publicKeys: (await openpgp.key.readArmored(publicKeyArmored)).keys, // for verification
+            publicKeys: (await openpgp.key.readArmored(pgpPublicKeyString)).keys, // for verification
           });
           console.log('verified', verified);
           const { valid } = verified.signatures[0];
@@ -337,7 +329,7 @@ module.exports = {
                   const newAmount = balance - amount;
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
-                  await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
+                  await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
                   res.status(200).json({status:true, message: 'Transfer money done' });
                 }
                 catch (err) {
@@ -357,7 +349,7 @@ module.exports = {
   moneyTransfer: async (req, res) => {
     try {
       await verifySig(req);
-      const { amount, content, transferer, receiver, payFee } = req.body;
+      const { amount, content, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
       if (isNaN(amount)) throw new Error('There is error in your request body.');
       const account = await customerModel.getCustomerByAccount(receiver);
       if (!account) throw new Error('Account not found.');
@@ -379,8 +371,8 @@ module.exports = {
         throw new Error('There is error in your request body.');
       }
 
-      await dealModel.addDeal(receiver, transferer, date, amount, content, isTrasfered, payFeeBy, type);
-      res.status(200).json( {status:true, message: 'Transfer money done' });
+      await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
+      res.status(200).json( {status:'success', message: 'Transfer money done' });
     } catch (err) {
       console.log("ERROR FINAL", err.message);
       res.status(400).json({ message: err.message });
