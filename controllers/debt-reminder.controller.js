@@ -114,7 +114,7 @@ module.exports = {
       accountNumberReceiver,
       con,
       time,
-      "delete"
+      "Xóa nợ!"
     );
 
     if (ret)
@@ -130,10 +130,32 @@ module.exports = {
     }
   },
   completeReminder: async (req, res) => {
+    const { nameTransferer, content, receiver } = req.body;
+    var date = new Date();
+    var time =
+      ("00" + date.getHours()).slice(-2) +
+      ":" +
+      ("00" + date.getMinutes()).slice(-2) +
+      ":" +
+      ("00" + date.getSeconds()).slice(-2) +
+      " " +
+      ("00" + date.getDate()).slice(-2) +
+      "/" +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
+      "/" +
+      date.getFullYear();
     const reminderId = req.params.id;
+
+    var con = nameTransferer + " đã nợ cho bạn với nội dung: " + content;
 
     // // change pay status
     const ret = await DebtReminder.completeReminder(reminderId);
+    var ret1 = await Notification.addNotification(
+      receiver,
+      con,
+      time,
+      "Được trả nợ!"
+    );
     if (ret)
       res.status(200).json({ status: true, message: "Trả nợ thành công!" });
     else res.status(400).json({ status: fasle, message: "Trả nợ thất bại" });

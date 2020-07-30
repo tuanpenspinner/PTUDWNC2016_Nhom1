@@ -2,6 +2,7 @@ const customerModel = require("../models/customer.model");
 
 module.exports = async (req, res, next) => {
   const { transferer, otp } = req.body;
+
   if (otp) {
     const isValid = await customerModel.checkMailOTP(transferer, otp);
     if (isValid) {
