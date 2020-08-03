@@ -25,6 +25,7 @@ const savingAccount = new Schema(
 );
 const receiver = new Schema(
   {
+    bankCode: { type: String, required: true, trim: true },//Loại ngân hàng
     accountNumber: { type: String, required: true, trim: true }, //số tài khoản thanh toán của người nhận
     name: { type: String, required: true }, //tên thay thế của người nhận
   },
