@@ -25,6 +25,11 @@ const PARTNERS = {
     // my bank - just to handle PGP call that come from TUB client
     // TUB here is a partner of LocalBank (TUB server)
     bank_code: "TUB"
+  },
+  tckbank: {
+    bank_code: "tckbank", // team Thuong
+    secret: "tck@bank",
+    apiRoot: "https://tckbank.herokuapp.com"
   }
 };
 const MY_BANK_SECRET = 'hiphopneverdie';
@@ -87,16 +92,62 @@ async function verifySig(req) {
           const hashString = hash.MD5(sigString); // return hex encoding string
           console.log("hashString in verifySig", hashString);
 
+          const privateKeyArmored = pgpPrivateKeyString;
+          const publicKeyArmored = pgpPublicKeyString;
+          const passphrase = 'Hiphop_never_die';
+
+          // signing
+          const {
+            keys: [privateKey],
+          } = await openpgp.key.readArmored(privateKeyArmored);
+          await privateKey.decrypt(passphrase);
+          const { data: genSig } = await openpgp.sign({
+            message: openpgp.cleartext.fromText(hashString), // CleartextMessage or Message object
+            privateKeys: [privateKey], // for signing
+          });
+          console.log('generated signature here', JSON.stringify(genSig));
+
           // verifying PGP signed message
           const verified = await openpgp.verify({
             message: await openpgp.cleartext.readArmored(JSON.parse(sig)), // parse armored message
             publicKeys: (await openpgp.key.readArmored(pgpPublicKeyString)).keys, // for verification
           });
-          console.log('verified', verified);
+          // console.log('signature in verified', verified.data);
+          const hashStringSign = verified.data
           const { valid } = verified.signatures[0];
-          console.log("verify result", valid);
+          // console.log("verify result", valid);
           if (!valid) {
             throw new Error('PGP signature could not be verified');
+          }
+          if (hashString !== hashStringSign) {
+            throw new Error('There are errors in your hash string');
+          }
+        }
+        break;
+      case 'tckbank': // team Thuong Thuong
+        {
+          const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
+          const hashString = hash.MD5(sigString); // return hex encoding string
+          console.log("hashString in verifySig", hashString);
+
+          // const privateKeyArmored = pgpPrivateKeyString;
+          // const publicKeyArmored = pgpPublicKeyString;
+          // const passphrase = 'Hiphop_never_die';
+
+          // verifying PGP signed message
+          const verified = await openpgp.verify({
+            message: await openpgp.cleartext.readArmored(JSON.parse(sig)), // parse armored message
+            publicKeys: (await openpgp.key.readArmored(partnerPgpPublicKeyString)).keys, // for verification
+          });
+          // console.log('signature in verified', verified.data);
+          const hashStringSign = verified.data
+          const { valid } = verified.signatures[0];
+          // console.log("verify result", valid);
+          if (!valid) {
+            throw new Error('PGP signature could not be verified');
+          }
+          if (hashString !== hashStringSign) {
+            throw new Error('There are errors in your hash string');
           }
         }
         break;
@@ -179,9 +230,9 @@ module.exports = {
             });
         }
         break;
-      case 'LocalBank':
+      case 'tckbank':
         {
-          console.log('localbank is calling api');
+          console.log('tckbank is calling api');
         }
         break;
       default:
@@ -267,6 +318,74 @@ module.exports = {
                 }
                 catch (err) {
                   res.status(400).json({status:false, message: err.message });
+                }
+              });
+          }
+          break;
+        case 'tckbank':
+          {
+            const { bank_code, content, amount, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
+
+            // signing PGP
+            const ts = moment().valueOf();
+            const body = {
+              amount,
+              content,
+              transferer,
+              receiver,
+              nameReceiver,
+              nameTransferer,
+              payFee,
+            };
+            const sigString = MY_BANK_CODE + ts + JSON.stringify(body) + PARTNERS[bank_code].secret;
+            const hashString = hash.MD5(sigString); // return hex encoding string
+            // console.log("hashString real", hashString);
+
+            const privateKeyArmored = pgpPrivateKeyString;
+            // const publicKeyArmored = pgpPublicKeyString;
+            const passphrase = 'Hiphop_never_die';
+
+            // signing
+            const {
+              keys: [privateKey],
+            } = await openpgp.key.readArmored(privateKeyArmored);
+            await privateKey.decrypt(passphrase);
+            const { data: sig } = await openpgp.sign({
+              message: openpgp.cleartext.fromText(hashString), // CleartextMessage or Message object
+              privateKeys: [privateKey], // for signing
+            });
+            // console.log("genSIG real", JSON.stringify(sig));
+
+            const headers = {
+              ts,
+              bank_code: MY_BANK_CODE,
+              sig: JSON.stringify(sig)
+            };
+            let isTrasfered = false;
+            const date = Date.now().toString();
+            const payFeeBy = payFee;
+            const type = {
+              name: 'transfer',
+              bankCode: bank_code,
+            };
+
+            superagent
+              .post(`${PARTNERS[bank_code].apiRoot}/deposits/receive`)
+              .send(body)
+              .set(headers)
+              .end(async (err, result) => {
+                try {
+                  if (err) throw new Error(err.message);
+                  const account = await customerModel.getCustomerByAccount(transferer);
+                  const balance = parseInt(account.checkingAccount.amount);
+                  const newAmount = balance - amount;
+                  await customerModel.updateCheckingAmount(transferer, newAmount);
+                  isTrasfered = true;
+                  await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
+                  res.status(200).json({status:"success", message: 'Transfer money done' });
+                }
+                catch (err) {
+                  res.status(400).json({ message: err.message });
                 }
               });
           }
