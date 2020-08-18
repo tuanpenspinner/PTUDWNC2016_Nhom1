@@ -18,7 +18,9 @@ module.exports = {
     } = req.body;
 
     if (!(creator && debtor && debt))
-      res.status(400).json({ message: "Missing infomations" });
+      res.status(400).json({
+        message: "Missing infomations",
+      });
     var date = new Date();
     var timeCreate =
       ("00" + date.getHours()).slice(-2) +
@@ -51,16 +53,25 @@ module.exports = {
         isDeleteBy: null,
       },
     };
-
+    var con = nameCreator + "đã tạo nhắc nợ với bạn với nội dung: " + content;
+    var ret1 = await Notification.addNotification(
+      debtor,
+      con,
+      timeCreate,
+      "Nhắc nợ!"
+    );
     const ret = DebtReminder.createReminder(newReminder);
-    if (ret) res.status(201).json({ message: "Thêm thành công" });
+    if (ret)
+      res.status(201).json({
+        message: "Thêm thành công",
+      });
     else {
       res.status(400).json({ message: "Thêm thất bại" });
     }
   },
   getListRemindersByAccount: async (req, res) => {
     const account = await Customer.findOneUserName(req.payload.username);
-    console.log(account);
+
     const listReminders = await DebtReminder.getListRemindersByAccount(
       account.checkingAccount.accountNumber
     );
@@ -87,7 +98,7 @@ module.exports = {
       content,
       types,
     } = req.body;
-    console.log(types);
+
     if (types === 1)
       var con = name + " đã hủy nhắc nợ mà bạn đã tạo với nội dung: " + content;
     else var con = name + " đã hủy nhắc với của bạn nội dung: " + content;

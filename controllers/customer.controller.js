@@ -48,7 +48,7 @@ exports.getCustomerInfo = async (req, res) => {
       email: result.email,
       listReceivers: result.listReceivers,
     };
-    console.log(customer);
+
 
     return res.json({
       status: true,
@@ -83,7 +83,6 @@ exports.getNameCustomer = async (req, res) => {
     const customer = {
       name: result.name,
     };
-    console.log(customer);
 
     return res.json({
       status: true,
@@ -149,7 +148,6 @@ exports.updateNameCustomer = async (req, res) => {
 exports.updateListReceivers = async (req, res) => {
   try {
     const { listReceivers } = req.body;
-    console.log(listReceivers);
     const { username } = req.payload;
 
     const ret = await Customer.updateListReceivers(username, listReceivers);
