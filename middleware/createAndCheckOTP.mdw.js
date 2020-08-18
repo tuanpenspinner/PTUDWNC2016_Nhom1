@@ -9,7 +9,7 @@ module.exports = async (req, res, next) => {
       next();
     } else res.status(401).json({ message: "Mã OTP không chính xác" });
   } else {
-    const OTP = Math.floor(Math.random() * 9999 + 1);
+    const OTP = Math.floor(Math.random() * 8999) + 1000;
     const customer = await customerModel.updateMailOTP(transferer, OTP);
     await customerModel.sendOTP(customer.email, OTP);
     if (customer) res.status(201).json({ message: "new otp has created" });

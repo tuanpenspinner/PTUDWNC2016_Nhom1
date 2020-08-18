@@ -29,7 +29,7 @@ const PARTNERS = {
   tckbank: {
     bank_code: "tckbank", // team Thuong
     secret: "tck@bank",
-    apiRoot: "https://tckbank.herokuapp.com"
+    apiRoot: "https://tckbank.herokuapp.com/deposits"
   }
 };
 const MY_BANK_SECRET = 'hiphopneverdie';
@@ -43,11 +43,13 @@ const pgpPublicKeyString = fs.readFileSync('pgp_public.key', 'utf8');
 const pgpPrivateKeyString = fs.readFileSync('pgp_private.key', 'utf8');
 // partners
 const parterRsaPublicKeyString = fs.readFileSync('partner_rsa_public.key', 'utf8');
+const parterTckbankRsaPublicKeyString = fs.readFileSync('partner_rsa_tckbank_public.key', 'utf8');
 const partnerPgpPublicKeyString = fs.readFileSync('partner_pgp_public.key', 'utf8');
 
 const rsaPrivateKey = new nodeRSA().importKey(rsaPrivateKeyString);
 const rsaPublicKey = new nodeRSA().importKey(rsaPublicKeyString);
 const partnerRSAPublicKey = new nodeRSA().importKey(parterRsaPublicKeyString);
+const partnerTCKBankRSAPulicKey = new nodeRSA().importKey(parterTckbankRsaPublicKeyString);
 
 // implement
 function checkSecurity(req, isMoneyAPI = false) {
@@ -128,27 +130,41 @@ async function verifySig(req) {
         {
           const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
           const hashString = hash.MD5(sigString); // return hex encoding string
-          console.log("hashString in verifySig", hashString);
 
-          // const privateKeyArmored = pgpPrivateKeyString;
-          // const publicKeyArmored = pgpPublicKeyString;
-          // const passphrase = 'Hiphop_never_die';
+          // sign
+          // const genSig = rsaPrivateKey.sign(hashString, 'hex', 'hex');
+          // console.log('genSig', genSig);
 
-          // verifying PGP signed message
-          const verified = await openpgp.verify({
-            message: await openpgp.cleartext.readArmored(JSON.parse(sig)), // parse armored message
-            publicKeys: (await openpgp.key.readArmored(partnerPgpPublicKeyString)).keys, // for verification
-          });
-          // console.log('signature in verified', verified.data);
-          const hashStringSign = verified.data
-          const { valid } = verified.signatures[0];
-          // console.log("verify result", valid);
-          if (!valid) {
-            throw new Error('PGP signature could not be verified');
+          const verification_result = partnerTCKBankRSAPulicKey.verify(hashString, sig, 'hex', 'hex');
+          // const verification_result = rsaPublicKey.verify(hashString, sig, 'hex', 'hex');
+          console.log('verify', verification_result)
+          if (!verification_result) {
+            throw new Error('Verify your RSA signature failed.');
           }
-          if (hashString !== hashStringSign) {
-            throw new Error('There are errors in your hash string');
-          }
+
+          // const sigString = bank_code + ts.toString() + JSON.stringify(req.body) + MY_BANK_SECRET;
+          // const hashString = hash.MD5(sigString); // return hex encoding string
+          // console.log("hashString in verifySig", hashString);
+          //
+          // // const privateKeyArmored = pgpPrivateKeyString;
+          // // const publicKeyArmored = pgpPublicKeyString;
+          // // const passphrase = 'Hiphop_never_die';
+          //
+          // // verifying PGP signed message
+          // const verified = await openpgp.verify({
+          //   message: await openpgp.cleartext.readArmored(JSON.parse(sig)), // parse armored message
+          //   publicKeys: (await openpgp.key.readArmored(partnerPgpPublicKeyString)).keys, // for verification
+          // });
+          // // console.log('signature in verified', verified.data);
+          // const hashStringSign = verified.data
+          // const { valid } = verified.signatures[0];
+          // // console.log("verify result", valid);
+          // if (!valid) {
+          //   throw new Error('PGP signature could not be verified');
+          // }
+          // if (hashString !== hashStringSign) {
+          //   throw new Error('There are errors in your hash string');
+          // }
         }
         break;
       default:
@@ -232,7 +248,21 @@ module.exports = {
         break;
       case 'tckbank':
         {
-          console.log('tckbank is calling api');
+          const body = {
+            account_number: account_number,
+          };
+          superagent
+            .post(`${PARTNERS[bank_code].apiRoot}/account_number`)
+            .send(body)
+            .end((err, result) => {
+              if (err) {
+                console.log(err);
+                res.status(404).json({ message: "Đã xảy ra lỗi khi tìm thông tin ở ngân hàng đối tác" });
+                return;
+              }
+              const name = JSON.parse(result.res.text || {}).name || 'Không tìm thấy thông tin';
+              res.status(200).json({ account_number, name });
+            });
         }
         break;
       default:
@@ -359,7 +389,7 @@ module.exports = {
             const headers = {
               ts,
               bank_code: MY_BANK_CODE,
-              sig: JSON.stringify(sig)
+              sig: JSON.stringify("\r\n-----BEGIN PGP SIGNED MESSAGE-----\r\nHash: SHA512\r\n\r\n917e121b744487e7babb649f73d3e054\r\n-----BEGIN PGP SIGNATURE-----\r\nVersion: OpenPGP.js v4.10.7\r\nComment: https://openpgpjs.org\r\n\r\nwsBzBAEBCgAGBQJfO5gDACEJEEAG3uUJMEffFiEETbVf9pEmJB1LhJgHQAbe\r\n5QkwR98Bpwf/f+CxwyZXd2jazYaVkC3uVLiryWtKSwDfl5qwNhynuWCSu1I2\r\naerKU2Aqc2Rpa8jTjiGXlp/RFOpjCIP576uvJHF2nMPkGExJkxzz/EUaHO7H\r\nZwYdj4+P3rPPbVPGnumhWwh+ewVM6Gb32Gnhya+W+lhixF0EIYWU0jd7JCXD\r\nN9aiJDIKcpQNCXnqtuDJp/nzGtKmNYJSxU9LTAtCjMfDbX88ni7l6CLovkP0\r\ndwMQUrLHa4IaQVZ5I7V0AJVN35OG4I+1/erG4Z144tsPgPBII7MQ0e+2mdIk\r\naLs/SMfc55yBgIQBQ6Fo6k4UQuJh2hmEks1EmcCOuhO65OLMxZ45xA==\r\n=4R0c\r\n-----END PGP SIGNATURE-----\r\n")
             };
             let isTrasfered = false;
             const date = Date.now().toString();
