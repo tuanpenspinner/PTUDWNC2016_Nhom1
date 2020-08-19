@@ -340,7 +340,8 @@ module.exports = {
                   if (err) throw new Error(err.message);
                   const account = await customerModel.getCustomerByAccount(transferer);
                   const balance = parseInt(account.checkingAccount.amount);
-                  const newAmount = balance - amount;
+                  const newAmount = balance - parseInt(amount);
+                  if (newAmount < 0) throw new Error('Tài khoản người gửi không đủ tiền.');
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
@@ -409,7 +410,8 @@ module.exports = {
                   if (err) throw new Error(err.message);
                   const account = await customerModel.getCustomerByAccount(transferer);
                   const balance = parseInt(account.checkingAccount.amount);
-                  const newAmount = balance - amount;
+                  const newAmount = balance - parseInt(amount);
+                  if (newAmount < 0) throw new Error('Tài khoản người gửi không đủ tiền.');
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
