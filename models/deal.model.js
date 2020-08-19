@@ -74,7 +74,11 @@ module.exports = {
       });
       return list.map((res) => {
         res = res.toObject();
-        return { ...res, time: res.time.toLocaleString("vi-VN") };
+        return {
+          ...res,
+          time: res.time.toLocaleString("vi-VN"),
+          _time: new Date(res.time.toLocaleString("vi-VN")).getTime(),
+        };
       });
     } catch (err) {
       console.log("ERR", err.message);
@@ -89,7 +93,11 @@ module.exports = {
       });
       return list.map((res) => {
         res = res.toObject();
-        return { ...res, time: res.time.toLocaleString("vi-VN") };
+        return {
+          ...res,
+          time: res.time.toLocaleString("vi-VN"),
+          _time: new Date(res.time.toLocaleString("vi-VN")).getTime(),
+        };
       });
     } catch (err) {
       console.log("ERR", err.message);
