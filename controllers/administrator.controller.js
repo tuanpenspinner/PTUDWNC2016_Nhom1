@@ -224,6 +224,7 @@ exports.loginAdmin = async (req, res) => {
       username: ret.username,
       email: ret.email,
       name: ret.name,
+      phone: ret.phone,
     };
     res.json({
       status: "success",
