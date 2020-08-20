@@ -278,7 +278,7 @@ module.exports = {
         case "TUB": // chuyen tien noi bo
           {
             const { amount, content, transferer, receiver, nameTransferer, nameReceiver, payFee } = req.body;
-            if (isNaN(amount)) throw new Error('There is error in your request body.');
+            if (isNaN(amount) || amount <= 0) throw new Error('There is error in your request body.');
             const receiverAcc = await customerModel.getCustomerByAccount(receiver);
             const transfererAcc = await customerModel.getCustomerByAccount(transferer);
             if (!receiverAcc || !transfererAcc) throw new Error('Account not found.');
@@ -292,7 +292,7 @@ module.exports = {
             };
             const transfererBalance = parseInt(transfererAcc.checkingAccount.amount);
             const receiverBalance = parseInt(receiverAcc.checkingAccount.amount);
-            if (transfererBalance >= parseInt(amount)) {
+            if (transfererBalance > parseInt(amount)) {
               await customerModel.updateCheckingAmount(receiver, receiverBalance + amount);
               await customerModel.updateCheckingAmount(transferer, transfererBalance - amount);
               isTrasfered = true;
@@ -307,6 +307,8 @@ module.exports = {
         case 'PPNBank':
           {
             const { bank_code, content, amount, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
+            if (isNaN(amount) || amount <= 0) throw new Error('There is error in your request body.');
+
             // sign
             const ts = moment().valueOf();
             const body = {
@@ -341,7 +343,7 @@ module.exports = {
                   const account = await customerModel.getCustomerByAccount(transferer);
                   const balance = parseInt(account.checkingAccount.amount);
                   const newAmount = balance - parseInt(amount);
-                  if (newAmount < 0) throw new Error('Tài khoản người gửi không đủ tiền.');
+                  if (newAmount <= 0) throw new Error('Tài khoản người gửi không đủ tiền.');
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
@@ -356,6 +358,7 @@ module.exports = {
         case 'tckbank':
           {
             const { bank_code, content, amount, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
+            if (isNaN(amount) || amount <= 0) throw new Error('There is error in your request body.');
 
             // signing PGP
             const ts = moment().valueOf();
@@ -411,7 +414,7 @@ module.exports = {
                   const account = await customerModel.getCustomerByAccount(transferer);
                   const balance = parseInt(account.checkingAccount.amount);
                   const newAmount = balance - parseInt(amount);
-                  if (newAmount < 0) throw new Error('Tài khoản người gửi không đủ tiền.');
+                  if (newAmount <= 0) throw new Error('Tài khoản người gửi không đủ tiền.');
                   await customerModel.updateCheckingAmount(transferer, newAmount);
                   isTrasfered = true;
                   await dealModel.addDeal(receiver, transferer, nameReceiver, nameTransferer, date, amount, content, isTrasfered, payFeeBy, type);
@@ -426,6 +429,7 @@ module.exports = {
         case 'LocalBank':
           {
             const { bank_code, content, amount, transferer, receiver, nameReceiver, nameTransferer, payFee } = req.body;
+            if (isNaN(amount) || amount <= 0) throw new Error('There is error in your request body.');
 
             // signing PGP
             const ts = moment().valueOf();
