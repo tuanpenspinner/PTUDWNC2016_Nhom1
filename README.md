@@ -1,5 +1,7 @@
 # PTUDWNC2016_Nhom1
 
+### Back-end for online banking project (powered by ExpressJs) - HCMUS
+
 ### Notes:
 
 - RSA:
