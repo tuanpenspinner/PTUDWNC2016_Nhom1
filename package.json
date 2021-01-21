@@ -36,7 +36,7 @@
     "object-hash": "^2.0.3",
     "openpgp": "^4.10.4",
     "rand-token": "^1.0.1",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "speakeasy": "^2.0.0",
     "superagent": "^5.2.2"
   },
