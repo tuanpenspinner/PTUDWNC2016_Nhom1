@@ -32,7 +32,7 @@
     "mongoose": "^5.9.15",
     "morgan": "^1.10.0",
     "node-rsa": "^1.0.8",
-    "nodemailer": "^6.4.8",
+    "nodemailer": "^6.4.16",
     "object-hash": "^2.0.3",
     "openpgp": "^4.10.4",
     "rand-token": "^1.0.1",
